@@ -80,18 +80,19 @@ icon = "email"
 weight = 2
 
 # ---------- Giscus 评论 ----------
-# 填入真实值前评论区不会显示（脚本报 404），不影响其他功能。
-# 获取方式：https://giscus.app
+# 已配置完成（https://giscus.app 生成）
+# 前置条件：仓库 Settings → General → Features → 勾选 Discussions
+# 隐藏单篇评论：在该页 front matter 加 disable_comments: true
 [params.giscus]
 repo = "WLYB2021/WLYB2021.github.io"
-repoID = "R_kgDOxxxxxxxxxx"
+repoID = "R_kgDOVAsNXg"
 category = "Announcements"
-categoryID = "DIC_kwDOxxxxxxxxxx"
+categoryID = "DIC_kwDOVAsNXs4DHUsi"
 mapping = "pathname"
-strict = "1"
+strict = "0"
 reactionsEnabled = "1"
 emitMetadata = "0"
-inputPosition = "bottom"
+inputPosition = "top"
 theme = "preferred_color_scheme"
 lang = "zh-CN"
 loading = "lazy"
