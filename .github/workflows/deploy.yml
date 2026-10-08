@@ -16,6 +16,8 @@ concurrency:
 
 env:
   HUGO_VERSION: 0.167.0
+  THEME_REPO: https://github.com/adityatelange/hugo-PaperMod.git
+  THEME_VERSION: v8.0
 
 jobs:
   build:
@@ -25,7 +27,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: recursive
+
+      # 主题被 .gitignore 排除（不占用仓库体积），需在 CI 单独拉取
+      - name: Checkout theme
+        run: |
+          git clone --depth 1 --branch "${THEME_VERSION}" "${THEME_REPO}" themes/PaperMod
+          chmod +x scripts/patch-theme.sh
+          ./scripts/patch-theme.sh themes/PaperMod
 
       - name: Install Hugo
         run: |
