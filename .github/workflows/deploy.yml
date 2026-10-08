@@ -48,8 +48,9 @@ jobs:
       - name: Build with Hugo
         id: build
         run: |
-          # baseURL 由 Pages 部署步骤动态注入，无需硬编码仓库名
-          hugo --minify --gc --baseURL "${{ steps.pages.outputs.base_url }}/"
+          # baseURL 优先用 Pages 注入的真实地址，未注入时回退到 hugo.toml
+          BASE="${{ steps.pages.outputs.base_url }}/"
+          hugo --minify --gc --baseURL "$BASE"
         env:
           HUGO_ENV: production
           TZ: Asia/Shanghai
