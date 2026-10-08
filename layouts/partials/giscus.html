@@ -1,0 +1,29 @@
+{{- /* Giscus 评论组件 · PaperMod 扩展
+     需在 hugo.toml 的 [params] 下配置 comments = true 与 [params.giscus] 各项
+     参考：https://giscus.app  */ -}}
+{{- $g := .Site.Params.giscus -}}
+{{- $enabled := .Site.Params.comments -}}
+{{- $disable := .Params.disable_comments | default false -}}
+{{- $showInList := .Site.Params.commentsInList | default false -}}
+{{- if and $enabled $g (not $disable) (not (eq $g.repo "")) (eq .Kind "page") -}}
+{{- $lang := $g.lang | default "zh-CN" -}}
+<div class="giscus-container">
+  <script src="https://giscus.app/client.js"
+          data-repo="{{ $g.repo }}"
+          data-repo-id="{{ $g.repoID }}"
+          data-category="{{ $g.category }}"
+          data-category-id="{{ $g.categoryID }}"
+          data-mapping="{{ $g.mapping | default "pathname" }}"
+          data-strict="{{ $g.strict | default "1" }}"
+          data-reactions-enabled="{{ $g.reactionsEnabled | default "1" }}"
+          data-emit-metadata="{{ $g.emitMetadata | default "0" }}"
+          data-input-position="{{ $g.inputPosition | default "bottom" }}"
+          data-theme="{{ $g.theme | default "preferred_color_scheme" }}"
+          data-lang="{{ $lang }}"
+          data-loading="{{ $g.loading | default "lazy" }}"
+          crossorigin="anonymous"
+          async>
+  </script>
+  <noscript>请开启 JavaScript 以查看评论。</noscript>
+</div>
+{{- end -}}

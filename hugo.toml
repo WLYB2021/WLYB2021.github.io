@@ -1,0 +1,118 @@
+# 用户站点仓库：WLYB2021.github.io → https://wlyb2021.github.io
+baseURL = "https://wlyb2021.github.io/"
+defaultContentLanguage = "zh"
+title = "My Blog"
+theme = "PaperMod"
+enableRobotsTXT = true
+enableGitInfo = false
+summaryLength = 30
+hasCJKLanguage = true
+# 忽略主题在更高版本 Hugo 下的历史告警
+ignoreLogs = ["warning-partial-superfluous-prefix"]
+
+[pagination]
+pagerSize = 10
+
+[taxonomies]
+tag = "tags"
+category = "categories"
+
+[markup]
+[markup.highlight]
+style = "github"
+noClasses = false
+lineNos = false
+[markup.goldmark.renderer]
+unsafe = true
+[markup.goldmark.parser]
+autoHeadingID = true
+autoHeadingIDType = "github"
+
+[outputs]
+home = ["HTML", "RSS", "JSON"]
+section = ["HTML", "RSS"]
+taxonomy = ["HTML", "RSS"]
+term = ["HTML", "RSS"]
+
+[sitemap]
+changefreq = "weekly"
+filename = "sitemap.xml"
+priority = 0.5
+
+# 主题放在 themes/PaperMod（由 GitHub Actions 克隆，无需 Go 环境）
+# ---------- 站点参数 ----------
+[params]
+author = "Your Name"
+description = "站点副标题 · 一句话描述这个博客写什么"
+defaultTheme = "auto"
+ShowReadingTime = true
+ShowWordCount = true
+ShowToc = true
+TocOpen = false
+ShowPostNavLinks = true
+ShowBreadCrumbs = true
+ShowCodeCopyButtons = true
+ShowShareButtons = true
+ShowRssButton = true
+DisplayFullLangName = false
+comments = true
+mainSections = ["posts"]
+
+# 首页模式：profile 显示个人卡片，home 保留文章流
+[params.profile]
+mode = ["profile", "home"]
+title = "Your Name"
+subtitle = "一句话介绍你自己"
+
+# ---------- 社交图标（侧边栏） ----------
+# 不需要的条目整段删除即可；完整图标名见：
+# https://github.com/adityatelange/hugo-PaperMod/tree/master/assets/icons
+[[params.social]]
+name = "GitHub"
+url = "https://github.com/WLYB2021"
+icon = "github"
+weight = 1
+
+[[params.social]]
+name = "Email"
+url = "mailto:you@example.com"
+icon = "email"
+weight = 2
+
+# ---------- Giscus 评论 ----------
+# 填入真实值前评论区不会显示（脚本报 404），不影响其他功能。
+# 获取方式：https://giscus.app
+[params.giscus]
+repo = "WLYB2021/WLYB2021.github.io"
+repoID = "R_kgDOxxxxxxxxxx"
+category = "Announcements"
+categoryID = "DIC_kwDOxxxxxxxxxx"
+mapping = "pathname"
+strict = "1"
+reactionsEnabled = "1"
+emitMetadata = "0"
+inputPosition = "bottom"
+theme = "preferred_color_scheme"
+lang = "zh-CN"
+loading = "lazy"
+
+# ---------- 搜索 ----------
+[params.search]
+enable = true
+fuzzy = true
+heading = true
+regex = false
+tagnames = ["tag", "category"]
+
+# ---------- 相关文章 ----------
+[params.related]
+threshold = 80
+toLower = false
+includeNewer = true
+count = 8
+
+# ---------- 底部版权 ----------
+[params.footer]
+showCopyright = true
+showPoweredBy = true
+copyright = "© 2026 Your Name · Built with Hugo & PaperMod"

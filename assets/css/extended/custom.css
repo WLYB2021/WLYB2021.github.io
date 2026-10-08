@@ -1,0 +1,251 @@
+/* ============================================
+   余曦的博客 · PaperMod 定制样式
+   目标：首页呈现简历式个人主页观感
+   ============================================ */
+
+/* ---------- 首页 Hero ---------- */
+.home-hero {
+  margin-bottom: 2.5rem;
+}
+.home-hero h1 {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-bottom: .6rem;
+  letter-spacing: -.01em;
+}
+.home-hero > p {
+  color: var(--secondary-text);
+  font-size: .98rem;
+  line-height: 1.75;
+  margin: 0 0 1.4rem;
+}
+.home-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.home-cta a {
+  display: inline-block;
+  padding: .42rem .95rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: .86rem;
+  text-decoration: none;
+  color: var(--text);
+  transition: all .18s ease;
+  background: var(--code-block-background);
+}
+.home-cta a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* ---------- 技术栈卡片网格 ---------- */
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: .8rem;
+  margin: 1.2rem 0 2rem;
+}
+.stack-card {
+  padding: .95rem 1.05rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--code-block-background);
+  font-size: .82rem;
+  line-height: 1.85;
+  color: var(--secondary-text);
+  transition: border-color .18s ease, transform .18s ease;
+}
+.stack-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.stack-card strong {
+  display: block;
+  margin-bottom: .35rem;
+  font-size: .86rem;
+  font-weight: 650;
+  color: var(--accent);
+}
+
+/* ---------- 项目指标表 ---------- */
+.project-metrics table {
+  width: 100%;
+  font-size: .84rem;
+  margin: 1rem 0 1.8rem;
+}
+.project-metrics td:first-child {
+  width: 104px;
+  font-weight: 600;
+  color: var(--accent);
+  vertical-align: top;
+  white-space: nowrap;
+}
+.project-metrics tr {
+  border-bottom: 1px solid var(--border);
+}
+.project-metrics tr:last-child {
+  border-bottom: none;
+}
+
+/* ---------- 首页文章卡片 ---------- */
+.post-cards {
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+  margin: 1.1rem 0 1.6rem;
+}
+.post-card-item {
+  padding: .85rem 1.05rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--code-block-background);
+  font-size: .85rem;
+  line-height: 1.7;
+  color: var(--secondary-text);
+  transition: transform .18s ease, border-color .18s ease;
+}
+.post-card-item:hover {
+  transform: translateX(3px);
+}
+.post-card-item a {
+  font-weight: 620;
+  font-size: .95rem;
+}
+
+/* ---------- 首页正文排版 ---------- */
+.main-home .post-content h2 {
+  font-size: 1.32rem;
+  font-weight: 650;
+  margin: 2.6rem 0 .9rem;
+  padding-bottom: .4rem;
+  border-bottom: 1px solid var(--border);
+}
+.main-home .post-content h3 {
+  font-size: 1.1rem;
+  font-weight: 620;
+  margin: 1.9rem 0 .7rem;
+}
+.main-home .post-content > p {
+  line-height: 1.8;
+}
+.main-home .post-content > p:first-of-type strong {
+  color: var(--accent);
+}
+
+/* 首页表格：技能矩阵 */
+.main-home .post-content table {
+  display: table;
+  width: 100%;
+  font-size: .85rem;
+  margin: 1.1rem 0 1.6rem;
+}
+.main-home .post-content table td:first-child {
+  width: 92px;
+  font-weight: 600;
+  color: var(--accent);
+  vertical-align: top;
+}
+.main-home .post-content table tr:hover {
+  background: var(--code-block-background);
+}
+
+/* 首页列表项 */
+.main-home .post-content ul li {
+  margin-bottom: .5rem;
+  line-height: 1.75;
+}
+
+/* ---------- 侧边栏头像 ---------- */
+.profile .avatar {
+  border-radius: 50%;
+  margin-bottom: .5rem;
+}
+.sidebar .profile .name {
+  font-size: 1.12rem;
+  font-weight: 650;
+}
+.sidebar .profile .subtitle {
+  font-size: .82rem;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+
+/* ---------- 顶部菜单项 ---------- */
+.header .menu a {
+  font-size: .88rem;
+  font-weight: 500;
+}
+.header .menu .active a {
+  color: var(--accent);
+}
+
+/* ---------- 阅读体验 ---------- */
+.post-content h2 {
+  font-weight: 650;
+}
+.post-content blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+  color: var(--secondary-text);
+}
+/* 行内代码稍亮一点，中文文档里更醒目 */
+.post-content code {
+  font-size: .86em;
+}
+
+/* ---------- 标签 ---------- */
+.tags .tag {
+  font-size: .74rem;
+  padding: .2rem .55rem;
+  border-radius: 6px;
+}
+
+/* ---------- 动画：卡片悬浮 ---------- */
+.post-card {
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.post-card:hover {
+  transform: translateY(-2px);
+}
+
+/* ---------- 移动端 ---------- */
+@media (max-width: 768px) {
+  .home-hero h1 {
+    font-size: 1.55rem;
+  }
+  .main-home .post-content table {
+    font-size: .78rem;
+  }
+  .main-home .post-content table td:first-child {
+    width: 68px;
+  }
+  .stack-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: .6rem;
+  }
+  .stack-card {
+    padding: .75rem .8rem;
+    font-size: .76rem;
+    line-height: 1.7;
+  }
+  .project-metrics table {
+    font-size: .78rem;
+  }
+  .project-metrics td:first-child {
+    width: 82px;
+  }
+}
+@media (max-width: 480px) {
+  .stack-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 打印 ---------- */
+@media print {
+  .header, .sidebar, .footer, .post-meta, #comments { display: none; }
+}
