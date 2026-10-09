@@ -12,6 +12,9 @@
 #
 # 幂等：已打过补丁的文件不会重复修改。
 # 幂等性通过校验修改后是否仍存在旧写法来保证。
+#
+# 另外顺带修复 2 处 Hugo v0.158+ 弃用调用（.Language.LanguageDirection
+# 与 .Language.LanguageCode），它们会在新版 Hugo 中持续刷告警。
 # ============================================
 set -euo pipefail
 
@@ -57,5 +60,32 @@ if grep -rqF "$OLD" "$THEME_DIR/layouts/partials/templates/" 2>/dev/null; then
   echo "错误：仍有未修补的旧写法" >&2
   exit 1
 fi
+
+# ---- 修复弃用调用：.Language.LanguageDirection / .Language.LanguageCode ----
+DEPRECATED_FILES=(
+  "layouts/_default/baseof.html"
+  "layouts/_default/rss.xml"
+)
+
+echo "==> 修补Hugo 弃用调用"
+
+for f in "${DEPRECATED_FILES[@]}"; do
+  path="$THEME_DIR/$f"
+
+  if [ ! -f "$path" ]; then
+    echo "  跳过（文件不存在）: $f" >&2
+    continue
+  fi
+
+  if grep -qF ".Language.LanguageDirection" "$path" || grep -qF ".Language.LanguageCode" "$path"; then
+    sed -i \
+      -e "s|\.Language\.LanguageDirection|.Language.Direction|g" \
+      -e "s|\.Language\.LanguageCode|.Language.Locale|g" \
+      "$path"
+    echo "  已修补: $f"
+  else
+    echo "  已修补，跳过: $f"
+  fi
+done
 
 echo "==> 补丁完成"

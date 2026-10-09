@@ -8,22 +8,26 @@
 
 ```
 .
-├── hugo.toml                    # 站点全部配置（主题/菜单/SEO/Giscus/社交图标）
+├── hugo.toml                    # 站点全部配置（主题/导航/SEO/Giscus/社交图标）
 ├── content/
 │   ├── _index.md                # 首页 = 技术栈 + 作品集（已脱敏，不含雇主信息）
 │   ├── about.md                 # 关于我
-│   ├── search.md                # 搜索页
 │   ├── archives.md              # 归档页
+│   ├── search.md                # 搜索页
+│   ├── 404.md                   # 404 页
 │   └── posts/                   # 博客文章
-│       ├── android-automotive-tel-practice.md
-│       ├── retrofit-to-ktor-migration.md
-│       └── agent-skill-workflow.md
+│       ├── first-post.md        # 示例文章（可删，保留作为写作参考）
+│       └── second-post.md       # 示例文章（可删）
 ├── layouts/partials/
 │   ├── comments.html            # 覆盖主题评论模板，接入 giscus
 │   └── giscus.html              # Giscus 嵌入组件
 ├── assets/css/extended/
 │   └── custom.css               # 定制样式（首页 Hero、卡片、表格等）
-├── static/images/               # 头像等静态资源
+├── static/
+│   ├── favicon.svg              # 站点图标
+│   └── images/                  # 头像、分享图等静态资源
+├── scripts/
+│   └── patch-theme.sh           # 主题兼容性补丁（本地与 CI 都会执行）
 └── .github/workflows/
     └── deploy.yml               # GitHub Actions：push main → 自动构建发布
 ```
@@ -104,17 +108,21 @@ description: "一句话摘要，显示在列表页"
 
 ## 需要替换的占位符
 
-站点地址与GitHub 用户名已填好（仓库 `WLYB2021.github.io`）。其余 `Your Name` / `you@example.com` 等需要替换：
+站点地址与 GitHub 用户名已填好（仓库 `WLYB2021.github.io`），Giscus ID 也已配好。
+剩余占位符统一用 `YOUR_NAME` / 示例文案标记，全仓库搜 `YOUR_NAME` 就能逐个清掉：
 
 | 位置 | 文件 | 占位内容 |
 |---|---|---|
-| 作者名 | `hugo.toml` | `Your Name`（`params.author`、`profile.title`、版权行） |
+| 作者名 | `hugo.toml` | `YOUR_NAME`（`title`、`params.author`、`profile.title`、版权行） |
 | 个人简介 | `hugo.toml` | `profile.subtitle`、`params.description` |
+| 导航菜单 | `hugo.toml` | `[[menu.main]]` 四项，按需增删改`url` |
 | 邮箱 | `hugo.toml` | `you@example.com`（不公开联系方式可删掉该 `[[params.social]]` 段） |
-| Giscus ID | `hugo.toml` | `repoID` / `categoryID`（`repo` 已填好） |
+| SEO 关键词 | `hugo.toml` | `params.keywords`（5~10 个真实主题词） |
+| 分享图 | `static/images/` | `og-default.png`，建议 1200×630 |
+| 站点图标 | `static/favicon.svg` | 默认深底白"F"，可替换 |
 | 首页内容 | `content/_index.md` | Hero、技术栈卡片、作品集、最近文章 |
 | 关于页 | `content/about.md` | 自我介绍、联系方式 |
-| 项目链接 | `content/_index.md`、`about.md` | `yourname/project` |
+| 项目链接 | `content/_index.md`、`about.md` | `github.com/WLYB2021/project` |
 | 示例文章 | `content/posts/` | `first-post.md`、`second-post.md` 可直接删除 |
 | 头像 | `static/images/` | 未放图片时侧边栏不显示头像 |
 

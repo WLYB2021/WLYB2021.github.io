@@ -1,7 +1,7 @@
 # 用户站点仓库：WLYB2021.github.io → https://wlyb2021.github.io
 baseURL = "https://wlyb2021.github.io/"
 defaultContentLanguage = "zh"
-title = "My Blog"
+title = "YOUR_NAME 的博客"
 theme = "PaperMod"
 enableRobotsTXT = true
 enableGitInfo = false
@@ -9,6 +9,28 @@ summaryLength = 30
 hasCJKLanguage = true
 # 忽略主题在更高版本 Hugo 下的历史告警
 ignoreLogs = ["warning-partial-superfluous-prefix"]
+
+# ---------- 顶层导航 ----------
+# 改 url 即可增删菜单项；weight 控制顺序（小的靠左）
+[[menu.main]]
+name = "文章"
+url = "/posts/"
+weight = 10
+
+[[menu.main]]
+name = "归档"
+url = "/archives/"
+weight = 20
+
+[[menu.main]]
+name = "关于"
+url = "/about/"
+weight = 30
+
+[[menu.main]]
+name = "搜索"
+url = "/search/"
+weight = 40
 
 [pagination]
 pagerSize = 10
@@ -42,7 +64,7 @@ priority = 0.5
 # 主题放在 themes/PaperMod（由 GitHub Actions 克隆，无需 Go 环境）
 # ---------- 站点参数 ----------
 [params]
-author = "Your Name"
+author = "YOUR_NAME"
 description = "站点副标题 · 一句话描述这个博客写什么"
 defaultTheme = "auto"
 ShowReadingTime = true
@@ -58,10 +80,24 @@ DisplayFullLangName = false
 comments = true
 mainSections = ["posts"]
 
+# ---------- 站点图标 ----------
+# 替换 static/favicon.svg 为自己的图标（建议 64×64，深底浅字）
+[params.assets]
+favicon = "favicon.svg"
+favicon16x16 = "favicon.svg"
+favicon32x32 = "favicon.svg"
+
+# ---------- SEO / 分享卡片 ----------
+# keywords 用英文逗号分隔；填 5~10 个你真正在写的主题词
+keywords = ["kotlin", "android", "hugo", "技术博客"]
+# 站点默认分享图（放static/images/og-default.png，建议 1200×630）
+images = ["images/og-default.png"]
+# 主页与各页面是否输出 canonical / OG 元信息（PaperMod 默认开启）
+
 # 首页模式：profile 显示个人卡片，home 保留文章流
 [params.profile]
 mode = ["profile", "home"]
-title = "Your Name"
+title = "YOUR_NAME"
 subtitle = "一句话介绍你自己"
 
 # ---------- 社交图标（侧边栏） ----------
@@ -116,4 +152,4 @@ count = 8
 [params.footer]
 showCopyright = true
 showPoweredBy = true
-copyright = "© 2026 Your Name · Built with Hugo & PaperMod"
+copyright = "© 2026 YOUR_NAME · Built with Hugo & PaperMod"
