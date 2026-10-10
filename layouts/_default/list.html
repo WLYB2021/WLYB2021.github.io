@@ -1,0 +1,84 @@
+{{- /*
+  列表页 · 编辑风（覆盖 PaperMod 的 list.html）
+  ---------------------------------------------------------------
+  用于 /posts/ 等 section 与 /tags/ 等 term 页。
+
+  版式（本轮重新设计）：
+    每篇文章渲染为一块「杂志式卡片」—— 期号 / 标题 / 摘要 / 元信息，
+    卡片之间用细分隔线分开，纵向堆叠。
+
+  为什么放弃「本期主打 + 编号索引」：
+    那套结构假设文章数量多（1 篇 hero + N 条索引才有对比感）。
+    实际只有少量文章时，会拆成「1 篇巨标题 + 1 条孤零零的索引」，
+    头重脚轻、下半页大面积留白。
+    改为等高卡片流后：2 篇时是两栏对开，20 篇时自然拉长成索引，
+    任何数量下版式都成立。
+
+  分页保留；面包屑移除（全站已用顶部「主页」入口代替）。
+*/ -}}
+{{ define "main" }}
+
+  {{- $pages := union .RegularPages .Sections -}}
+  {{- if .IsHome }}{{ $pages = where site.RegularPages "Type" "in" site.Params.mainSections }}{{ $pages = where $pages "Params.hiddenInHomeList" "!=" "true" }}{{ end -}}
+  {{- /* 显式按日期倒序（新的在前），避免不同 Hugo 版本下 .Paginate 的
+         默认排序差异；下面的"第几篇"编号依赖这个确定的顺序。 */ -}}
+  {{- $pages = sort $pages "Date" "desc" -}}
+  {{- $paginator := .Paginate $pages -}}
+
+  {{- if .Title }}
+  <header class="page-header ed-page-header">
+    <h1 class="ed-page-title">{{ .Title }}</h1>
+    {{- if .Description }}<div class="post-description ed-page-desc">{{ .Description | markdownify }}</div>{{ end -}}
+    {{- /* 篇数统计：给页头一个"栏目"的实感，也让空白页不至于太空 */ -}}
+    <div class="ed-page-count">
+      <span class="ed-page-count-num">{{ $paginator.TotalNumberOfElements }}</span>
+      <span class="ed-page-count-label">篇</span>
+    </div>
+  </header>
+  {{- end -}}
+
+  {{- if .Content }}<div class="post-content">{{ partial "anchored_headings.html" .Content }}</div>{{ end -}}
+
+  {{- with $paginator.Pages }}
+  <div class="ed-list-wrap">
+    <ol class="ed-li-list">
+      {{- /* 序号 = "全站第几篇"，以最早发布的那篇为 01。
+             显示顺序是日期倒序（新的在前），所以编号要倒着数：
+             第 1 条显示的是第 N 篇，最后一条显示的是第 01 篇。
+             用全站篇数（$paginator.TotalNumberOfElements）减当前条目的
+             全局索引反推，翻页后也保持连续（$firstGlobal 是本页首条的全局位次）。 */ -}}
+      {{- $total := $paginator.TotalNumberOfElements -}}
+      {{- $firstGlobal := add (mul (sub $paginator.PageNumber 1) $paginator.PagerSize) 1 -}}
+      {{- range $i, $p := . }}
+      {{- $issueNo := sub (add $total 1) (add $firstGlobal $i) -}}
+      <li class="ed-li-item">
+        <a class="ed-li-link" href="{{ $p.Permalink }}">
+          <span class="ed-li-num">{{ printf "%02d" $issueNo }}</span>
+          <div class="ed-li-body">
+            <h2 class="ed-li-title">{{ $p.Title }}</h2>
+            {{- with $p.Description }}
+            <p class="ed-li-desc">{{ . | plainify | htmlUnescape }}</p>
+            {{- else }}
+            <p class="ed-li-desc">{{ $p.Summary | plainify | htmlUnescape | truncate 120 }}</p>
+            {{- end }}
+            <div class="ed-li-meta">
+              <time datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date | time.Format "2006 年 1 月 2 日" }}</time>
+              {{- if $p.ReadingTime }}<span class="ed-li-dot">·</span><span>{{ $p.ReadingTime }} 分钟</span>{{ end }}
+            </div>
+          </div>
+        </a>
+      </li>
+      {{- end }}
+    </ol>
+  </div>
+  {{- end }}
+
+  {{- if gt $paginator.TotalPages 1 }}
+  <footer class="page-footer ed-list-footer">
+    <nav class="pagination">
+      {{- if $paginator.HasPrev }}<a class="prev" href="{{ $paginator.Prev.URL | absURL }}">«&nbsp;{{ i18n "prev_page" }}{{ if (.Param "ShowPageNums") }}&nbsp;{{ sub $paginator.PageNumber 1 }}/{{ $paginator.TotalPages }}{{ end }}</a>{{ end -}}
+      {{- if $paginator.HasNext }}<a class="next" href="{{ $paginator.Next.URL | absURL }}">{{ i18n "next_page" }}{{ if (.Param "ShowPageNums") }}&nbsp;{{ add 1 $paginator.PageNumber }}/{{ $paginator.TotalPages }}{{ end }}&nbsp;»</a>{{ end -}}
+    </nav>
+  </footer>
+  {{- end }}
+{{ end }}

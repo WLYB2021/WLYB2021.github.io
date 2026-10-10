@@ -1,7 +1,7 @@
 # 用户站点仓库：WLYB2021.github.io → https://wlyb2021.github.io
 baseURL = "https://wlyb2021.github.io/"
 defaultContentLanguage = "zh"
-title = "YOUR_NAME 的博客"
+title = "Xi 的博客"
 theme = "PaperMod"
 enableRobotsTXT = true
 enableGitInfo = false
@@ -12,6 +12,11 @@ ignoreLogs = ["warning-partial-superfluous-prefix"]
 
 # ---------- 顶层导航 ----------
 # 改 url 即可增删菜单项；weight 控制顺序（小的靠左）
+[[menu.main]]
+name = "主页"
+url = "/"
+weight = 5
+
 [[menu.main]]
 name = "文章"
 url = "/posts/"
@@ -64,8 +69,8 @@ priority = 0.5
 # 主题放在 themes/PaperMod（由 GitHub Actions 克隆，无需 Go 环境）
 # ---------- 站点参数 ----------
 [params]
-author = "YOUR_NAME"
-description = "站点副标题 · 一句话描述这个博客写什么"
+author = "Xi"
+description = "Writing what's worth keeping."
 defaultTheme = "auto"
 ShowReadingTime = true
 ShowWordCount = true
@@ -89,16 +94,34 @@ favicon32x32 = "favicon.svg"
 
 # ---------- SEO / 分享卡片 ----------
 # keywords 用英文逗号分隔；填 5~10 个你真正在写的主题词
-keywords = ["kotlin", "android", "hugo", "技术博客"]
+keywords = ["技术笔记", "kotlin", "kmp", "跨平台", "思考", "折腾", "独立开发"]
 # 站点默认分享图（放static/images/og-default.png，建议 1200×630）
 images = ["images/og-default.png"]
 # 主页与各页面是否输出 canonical / OG 元信息（PaperMod 默认开启）
 
-# 首页模式：profile 显示个人卡片，home 保留文章流
+# ---------- 首页模式 ----------
+# mode = ["profile", "home"]：侧边栏显示个人名片，首页保留文章流
+# 卡片渲染见 layouts/partials/profile_card.html（覆盖主题的失效实现）
 [params.profile]
 mode = ["profile", "home"]
-title = "YOUR_NAME"
-subtitle = "一句话介绍你自己"
+title = "Xi"
+subtitle = "Writing what's worth keeping."
+desc = "No fixed theme, no persona. Just notes worth keeping — a detour, an idea, or the clarity that comes after a mistake."
+# 头像：把图片放到 static/images/ 后填路径，如 "images/avatar.jpg"；留空不显示
+imageUrl = ""
+imageTitle = "Xi"
+imageWidth = 150
+imageHeight = 150
+
+# 首页文章流
+postsHeading = "最新文章"
+homePostsLimit = 5
+# true 时首页文章卡片不显示日期 / 阅读时长
+hideMeta = false
+
+# ---------- 联系方式 ----------
+# 邮箱只填这一处，社交图标会自动引用，改地址不用改两遍
+email = "yuxi279239@163.com"
 
 # ---------- 社交图标（侧边栏） ----------
 # 不需要的条目整段删除即可；完整图标名见：
@@ -110,6 +133,22 @@ icon = "github"
 weight = 1
 
 [[params.social]]
+name = "Email"
+url = "mailto:you@example.com"
+icon = "email"
+weight = 2
+
+# ---------- 社交图标旧键名 ----------
+# PaperMod v8.0 的 index_profile.html 读的是 socialIcons（复数）。
+# 当前 profile 卡片已由 layouts/partials/profile_card.html 接管，
+# 读的是上面的 params.social；此处仅为兼容主题旧实现保留。
+[[params.socialIcons]]
+name = "GitHub"
+url = "https://github.com/WLYB2021"
+icon = "github"
+weight = 1
+
+[[params.socialIcons]]
 name = "Email"
 url = "mailto:you@example.com"
 icon = "email"
@@ -152,4 +191,4 @@ count = 8
 [params.footer]
 showCopyright = true
 showPoweredBy = true
-copyright = "© 2026 YOUR_NAME · Built with Hugo & PaperMod"
+copyright = "© 2026 Xi · Built with Hugo & PaperMod"

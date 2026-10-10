@@ -1,0 +1,52 @@
+{{- /*
+  文章侧栏目录（自建，替代主题 toc.html）
+  ---------------------------------------------------------------
+  为什么自建：
+    主题 toc.html 会把 h1–h6 全部层级递归展开。本文层级较深（到 h4），
+    344px 侧栏会列出 30+ 项，信息过载、失去"目录"的导航意义。
+  本版策略：
+    只取 h2 / h3 两级（编辑风侧栏的常见粒度），最多再降一级；
+    h1 通常等同文章大节，若存在也一并作为一级展示。
+  输出结构：
+    <div class="toc"><div class="toc-head">目录</div><ul class="toc-list">…</ul></div>
+  样式在 custom.css 的 .ed-rail .toc 段。
+*/ -}}
+{{- $content := .Content -}}
+{{- $headers := findRE "<h[1-3][^>]*>.*?</h[1-3]>" $content -}}
+{{- if ge (len $headers) 1 -}}
+
+  {{- /* 归一化：把每个标题解析为 {level, id, text} */ -}}
+  {{- $items := slice -}}
+  {{- range $headers -}}
+    {{- /* 标题级别：从 "<h2" 里取出数字字符，直接转 int（不能用 len(seq)，那会得到 1） */ -}}
+    {{- $digit := index (findRE "[1-3]" (index (findRE "<h[1-3]" . 1) 0) 1) 0 -}}
+    {{- $level := int $digit -}}
+    {{- $id := "" -}}
+    {{- with (findRE "id=\"([^\"]+)\"" . 1) -}}
+      {{- $id = replace (replace (index . 0) "id=\"" "") "\"" "" -}}
+    {{- end -}}
+    {{- $text := . | replaceRE "<h[1-3][^>]*>" "" | replaceRE "</h[1-3]>" "" | plainify | htmlUnescape -}}
+    {{- if and $id (ne $text "") -}}
+      {{- $items = $items | append (dict "level" $level "id" $id "text" $text) -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if $items -}}
+    {{- $minLevel := 3 -}}
+    {{- range $items -}}{{- if lt .level $minLevel -}}{{- $minLevel = .level -}}{{- end -}}{{- end -}}
+    {{- $maxLevel := add $minLevel 1 -}}   {{- /* 只展示两层 */ -}}
+
+    <div class="toc">
+      <div class="toc-head">目录</div>
+      <ul class="toc-list">
+        {{- range $items -}}
+          {{- if le .level $maxLevel -}}
+            <li class="toc-l{{ .level }}">
+              <a href="#{{ .id }}">{{ .text }}</a>
+            </li>
+          {{- end -}}
+        {{- end -}}
+      </ul>
+    </div>
+  {{- end -}}
+{{- end -}}

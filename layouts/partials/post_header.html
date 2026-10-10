@@ -1,0 +1,41 @@
+{{- /*
+  文章头部（可复用）
+  ---------------------------------------------------------------
+  抽取文章页的 breadcrumbs / 标题 / 副标题 / meta，供两处渲染：
+    - 左栏（初始态）：顶部顺序显示；
+    - 右栏（常驻态）：下滑后接管显示。
+  两处 DOM 完全相同，仅外层容器不同 → 由 CSS 控制显隐，JS 只切一个类。
+
+  参数：. = 当前 page
+  可选 class 前缀通过 .ctx 传入（本版无需，保持简单）。
+*/ -}}
+{{- $page := . -}}
+<header class="post-header">
+  {{- /* 面包屑「主页 » 文章」已移除：文章页里它信息量为零
+         （全站都是文章），且顶部导航已提供「主页」入口，
+         故不再渲染。主题的 breadcrumbs.html 保持原样不受影响。 */ -}}
+  <h1 class="post-title entry-hint-parent">
+    {{ $page.Title }}
+    {{- if $page.Draft }}
+    <span class="entry-hint" title="Draft">
+      <svg xmlns="http://www.w3.org/2000/svg" height="35" viewBox="0 -960 960 960" fill="currentColor">
+        <path
+          d="M160-410v-60h300v60H160Zm0-165v-60h470v60H160Zm0-165v-60h470v60H160Zm360 580v-123l221-220q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q9 9 13 20t4 22q0 11-4.5 22.5T862.09-380L643-160H520Zm300-263-37-37 37 37ZM580-220h38l121-122-18-19-19-18-122 121v38Zm141-141-19-18 37 37-18-19Z" />
+      </svg>
+    </span>
+    {{- end }}
+  </h1>
+  {{- if $page.Description }}
+  <div class="post-description">
+    {{ $page.Description }}
+  </div>
+  {{- end }}
+  {{- if not ($page.Param "hideMeta") }}
+  <div class="post-meta">
+    {{- partial "post_meta.html" $page -}}
+    {{- partial "translation_list.html" $page -}}
+    {{- partial "edit_post.html" $page -}}
+    {{- partial "post_canonical.html" $page -}}
+  </div>
+  {{- end }}
+</header>

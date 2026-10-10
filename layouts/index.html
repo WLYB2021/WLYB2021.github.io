@@ -1,0 +1,90 @@
+{{- /*
+  首页 · 编辑风（双态响应式）
+  ---------------------------------------------------------------
+  同一套内容，两种信息架构：
+    窄屏（<1080px）→ 方向 1「全幅报头」：顶部整幅报头（站名居中 +
+      副标题 + 社交），下方文章单栏流（巨号序号 + 衬线标题 + 发丝线）。
+    宽屏（≥1080px）→ 方向 2「左刊名竖栏」：报头收进左侧常驻栏
+      （刊名 + 期号 + 年/篇数 + 社交），右侧文章流。
+
+  实现：报头 .ed-masthead 为独立块，窄屏置顶、宽屏由 CSS grid 挪入左栏；
+  文章流 .ed-grid 始终单列（不做双列拼贴）。旧的 profile_card 与刊头已移除。
+*/ -}}
+{{ define "main" }}
+  {{- $social := site.Params.social -}}
+  {{- $pages := (where site.RegularPages "Type" "in" site.Params.mainSections) -}}
+  {{- $pages = sort $pages "Date" "desc" -}}
+
+  <section class="ed-front">
+    {{- if $pages }}
+      {{- /* 报头：承担全站导航（顶栏在首页隐藏）；窄屏置顶 / 宽屏移入左栏 */ -}}
+      <header class="ed-masthead">
+        <div class="ed-masthead-top">
+          <div class="ed-masthead-title">{{ site.Title }}</div>
+          <div class="ed-masthead-dek">{{ site.Params.description | default site.Params.profile.subtitle }}</div>
+        </div>
+        <nav class="ed-masthead-nav" aria-label="站点导航">
+          {{- partial "nav_menu.html" . }}
+          <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="切换主题">
+            <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+          </button>
+        </nav>
+        <div class="ed-masthead-foot">
+          <span class="ed-masthead-issue">{{ now.Format "2006" }} · {{ len $pages }} 篇</span>
+          {{- with $social }}
+          <div class="ed-social">
+            {{- range . }}
+            {{- $href := .url -}}
+            {{- if and (eq .icon "email") site.Params.email }}{{ $href = printf "mailto:%s" site.Params.email }}{{ end -}}
+            <a href="{{ $href | safeURL }}" target="_blank" rel="noopener noreferrer me"
+               title="{{ .name }}" aria-label="{{ .name }}">{{ partial "svg.html" . }}</a>
+            {{- end }}
+          </div>
+          {{- end }}
+        </div>
+      </header>
+
+      {{- /* 文章流：始终单列，宽屏在右列 */ -}}
+      <div class="ed-body">
+        <div class="ed-grid-head">
+          <span class="ed-kicker">文章</span>
+          <span class="ed-grid-count">{{ len $pages }} 篇 · 持续更新</span>
+        </div>
+        <div class="ed-grid">
+          {{- /* 序号 = 全站第几篇（按发布日期升序）：最早的为 01。
+                 $pages 已按日期倒序（新→旧），故用 len($pages) - $i 反推。 */ -}}
+          {{- $total := len $pages -}}
+          {{- range $i, $p := $pages }}
+          <article class="ed-card">
+            <a class="ed-card-link" href="{{ $p.Permalink }}" aria-label="{{ $p.Title }}"></a>
+            <span class="ed-card-num">{{ printf "%02d" (sub $total $i) }}</span>
+            <div class="ed-card-body">
+              <h2 class="ed-card-title">{{ $p.Title }}</h2>
+              <p class="ed-card-desc">{{ $p.Summary | plainify | htmlUnescape }}</p>
+              <div class="ed-card-meta">{{- partial "post_meta.html" $p -}}</div>
+            </div>
+          </article>
+          {{- end }}
+        </div>
+        <a class="ed-all" href="{{ "posts/" | relURL }}">查看全部文章 →</a>
+      </div>
+    {{- else }}
+      <p class="ed-empty">还没有文章，先去 <a href="{{ "about/" | relURL }}">关于</a> 看看。</p>
+    {{- end }}
+  </section>
+{{ end }}

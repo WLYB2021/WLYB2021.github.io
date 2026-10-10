@@ -1,0 +1,24 @@
+{{- /*
+  主题切换图标（moon / sun 双图标，由 CSS 按 body.dark 切换显隐）
+  ---------------------------------------------------------------
+  参数：iconIDPrefix = 图标 id 前缀（避免同页两个按钮 id 重复）
+  注意：PaperMod 的 head.html / footer.html 依赖 #moon / #sun 的 CSS 规则，
+        但那是全局规则；这里我们用自己的类名控制显隐，不依赖 id。
+*/ -}}
+{{- $p := .iconIDPrefix | default "ed" -}}
+<svg class="ed-icon ed-icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+</svg>
+<svg class="ed-icon ed-icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <circle cx="12" cy="12" r="5"></circle>
+  <line x1="12" y1="1" x2="12" y2="3"></line>
+  <line x1="12" y1="21" x2="12" y2="23"></line>
+  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+  <line x1="1" y1="12" x2="3" y2="12"></line>
+  <line x1="21" y1="12" x2="23" y2="12"></line>
+  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+</svg>

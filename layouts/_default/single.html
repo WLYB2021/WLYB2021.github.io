@@ -1,0 +1,285 @@
+{{- /*
+  文章页 · 编辑风 · 双栏 + 悬浮迁移布局（覆盖 PaperMod 的 single.html）
+  ---------------------------------------------------------------
+  布局本质（恒定不变，只有一块内容在迁移）：
+    左栏  = 文章正文    （始终在这，位置固定）
+    右栏  = 目录        （始终在这，位置固定）
+    悬浮块 = 功能入口 + 文章 header
+      顶部态：贴在左栏正文上方（顺排：入口 → header → 正文）
+      下滑态：迁到右栏，叠在目录上方（竖排：入口 → header → 目录）
+      迁移过程：跟随滚动位置实时插值，不是瞬切。
+
+  实现要点：
+    1. 悬浮块 .ed-float 是**单份 DOM**，绝对定位于 .ed-shell 内。
+       JS 按滚动进度 p∈[0,1] 在两个目标位置之间插值 left / top / width。
+    2. 左栏正文预留出悬浮块的初始高度（.ed-main 的 padding-top），
+       使"顶部态"下入口、header、正文看起来是同列顺排。
+    3. 主题切换按钮保留 id="theme-toggle" 供主题 footer 脚本绑定；
+       可见按钮代理点击它，避免双份状态源。
+    4. 窄屏（<1080px）退回单栏常规流，不做迁移。
+*/ -}}
+{{ define "main" }}
+
+<article class="post-single ed-single">
+  <div class="ed-shell">
+
+    {{- /* ============ 左栏：文章正文（恒定） ============ */ -}}
+    <div class="ed-main">
+      {{- $isHidden := (.Param "cover.hiddenInSingle") | default (.Param "cover.hidden") | default false }}
+      {{- partial "cover.html" (dict "cxt" . "IsSingle" true "isHidden" $isHidden) }}
+
+      {{- if .Content }}
+      <div class="post-content">
+        {{- if not (.Param "disableAnchoredHeadings") }}
+        {{- partial "anchored_headings.html" .Content -}}
+        {{- else }}{{ .Content }}{{ end }}
+      </div>
+      {{- end }}
+
+      <footer class="post-footer">
+        {{- $tags := .Language.Params.Taxonomies.tag | default "tags" }}
+        <ul class="post-tags">
+          {{- range ($.GetTerms $tags) }}
+          <li><a href="{{ .Permalink }}">{{ .LinkTitle }}</a></li>
+          {{- end }}
+        </ul>
+        {{- if (.Param "ShowPostNavLinks") }}
+        {{- partial "post_nav_links.html" . }}
+        {{- end }}
+        {{- if (and site.Params.ShowShareButtons (ne .Params.disableShare true)) }}
+        {{- partial "share_icons.html" . -}}
+        {{- end }}
+      </footer>
+
+      {{- if (.Param "comments") }}
+      {{- partial "comments.html" . }}
+      {{- end }}
+    </div>
+
+    {{- /* ============ 右栏：目录（恒定） ============ */ -}}
+    <aside class="ed-rail" aria-label="目录">
+      <div class="ed-rail-inner">
+        {{- /* 目录上方留出悬浮块迁移过来的占位高度（JS 动态设置 --ed-float-h） */ -}}
+        <div class="ed-rail-spacer" aria-hidden="true"></div>
+        {{- if (.Param "ShowToc") }}
+        {{- partial "toc.html" . }}
+        {{- end }}
+      </div>
+    </aside>
+
+    {{- /* ============ 悬浮块：入口 + header（迁移主体） ============ */ -}}
+    <div class="ed-float" data-ed-float>
+      <div class="ed-float-inner">
+        {{- /* 入口：功能导航 + 主题切换。顶部态横排，下滑态竖排。 */ -}}
+        <nav class="ed-entries" aria-label="快捷入口">
+          {{- partial "nav_menu.html" . }}
+          <button class="ed-theme-toggle" id="ed-theme-visible" accesskey="t" title="(Alt + T)" aria-label="切换主题">
+            {{- partial "theme_icon.html" (dict "iconIDPrefix" "ed") -}}
+          </button>
+        </nav>
+
+        {{- /* 文章 header：顶部态夸张，下滑态简洁 */ -}}
+        <div class="ed-float-header">
+          {{- partial "post_header.html" . -}}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</article>
+
+{{- /* 交互脚本：悬浮块随滚动插值迁移 + 目录 scroll-spy。
+       放在本模板内（不放进被 partialCached 的 footer），避免缓存污染导致脚本丢失。 */ -}}
+<script>
+  (function () {
+    var mq = window.matchMedia('(min-width: 1080px)');
+    var shell = document.querySelector('.ed-shell');
+    var floatEl = document.querySelector('[data-ed-float]');
+    var mainEl = document.querySelector('.ed-main');
+    var railEl = document.querySelector('.ed-rail');
+    if (!shell || !floatEl) return;
+
+    /* ================================================================
+       1. 悬浮块迁移：一动即触发 + 一次性动画
+       ----------------------------------------------------------------
+       机制：
+         只要发生纵向滚动（scrollY 与"回顶基准"拉开超过 TRIGGER_PX），
+         立刻给 .ed-shell 加 .is-pinned；回到顶部（scrollY ≈ 0）时移除。
+         两个端点由 JS 写死像素值，中间的过渡交给 CSS transition
+         播一段短动画（一次性完成，不跟随滚动位移）。
+
+       为什么这样做：
+         跟随滚动时，悬浮块会长时间横穿正文列，途中与正文/目录交叠，
+         观感容易"乱"。改成一动即触发后，用户一开始下滚动画就播完，
+         之后整段阅读过程画面稳定。
+
+       两个端点：
+         左栏态（未 pinned）：translateX(0)，正文用 padding-top 让位
+         右栏态（pinned）  ：translateX(Δ)，正文 padding-top 归零、
+                            右栏 spacer 撑出让位高度
+       ================================================================ */
+    var TRIGGER_PX = 8;      // 滚动位移超过它就触发迁移（给触控板抖动留余量）
+    var RELEASE_PX = 2;      // 回到接近顶部（位移 <= 它）才解除迁移
+    var tx = 0;              // 横向平移距离：右栏左边界 - 正文列左边界
+    var pinned = null;       // 当前状态（null=未判定）
+
+    function measure() {
+      if (!mq.matches) return;
+      var mainRect = mainEl.getBoundingClientRect();
+      var railRect = railEl.getBoundingClientRect();
+      tx = railRect.left - mainRect.left;
+    }
+
+    // 把测量结果写进 CSS 变量；中间过程由 CSS transition 补间。
+    // 高度不在这里读，改由 ResizeObserver 追踪（见下），避免
+    // "读高度 → 改样式 → 高度又变" 的反馈环。
+    function writeVars() {
+      shell.style.setProperty('--ed-tx', tx.toFixed(1) + 'px');
+    }
+
+    /* 高度同步：悬浮块在两种形态下高度不同，而它的宽度参与换行计算，
+       所以高度不能靠一次性测量。用 ResizeObserver 跟踪实际排版高度：
+         · --ed-float-h  左栏态 → 给正文 padding-top 让位
+         · --ed-rail-h   右栏态 → 给右栏 spacer 撑开，把目录推到块下方
+       只在对应状态下写入，避免互相污染。
+
+       注意：迁移动画进行中宽度在连续变化，每隔几帧都会触发本回调，
+       此时读到的是"半途"高度。若直接写入，spacer 会跟着抖。
+       做法：迁移途中跳过，等 transition 结束（或首次进入该状态）再量一次。 */
+    var heightTimer = null;
+    function syncHeights(immediate) {
+      if (!mq.matches) return;
+      if (!immediate) {
+        // 防抖：连续尺寸变化时只在安静下来后写一次
+        if (heightTimer) clearTimeout(heightTimer);
+        heightTimer = setTimeout(function () { heightTimer = null; syncHeights(true); }, 60);
+        return;
+      }
+      var h = Math.max(floatEl.offsetHeight, 1);
+      if (shell.classList.contains('is-pinned')) {
+        // spacer 只预留布局高度（不含底板外扩 PAD —— 那是绘制效果，
+        // 若算进来会让目录被多推下 36px，尾部跌出视口）。
+        shell.style.setProperty('--ed-rail-h', h.toFixed(1) + 'px');
+      } else {
+        shell.style.setProperty('--ed-float-h', h.toFixed(1) + 'px');
+      }
+    }
+
+    function update() {
+      if (!mq.matches) {
+        shell.classList.remove('is-pinned');
+        pinned = null;
+        return;
+      }
+      measure();
+      writeVars();
+
+      // 迟滞比较：触发门槛（TRIGGER_PX）高于解除门槛（RELEASE_PX）。
+      // 这样 y 在 (RELEASE_PX, TRIGGER_PX] 之间时状态保持，
+      // 只有在真正回到顶部（y <= RELEASE_PX）才撤销。
+      var y = window.scrollY;
+      var should = pinned ? y > RELEASE_PX : y > TRIGGER_PX;
+      if (should !== pinned) {
+        pinned = should;
+        shell.classList.toggle('is-pinned', should);
+        // 切状态后防抖量一次（等 transition 走完再定高度）
+        syncHeights();
+      }
+    }
+
+    /* ================================================================
+       2. 目录 scroll-spy
+       ================================================================ */
+    var toc = document.querySelector('.ed-rail .toc');
+    var links = toc ? Array.prototype.slice.call(toc.querySelectorAll('.toc-list a[href^="#"]')) : [];
+    var headings = links
+      .map(function (a) {
+        var el = document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)));
+        return el ? { el: el, link: a } : null;
+      })
+      .filter(Boolean);
+
+    var active = null;
+    function setActive(item) {
+      if (active === item) return;
+      if (active) active.link.classList.remove('toc-active');
+      active = item;
+      if (!active) return;
+      active.link.classList.add('toc-active');
+      // 滚动容器随状态变化：
+      //   顶部态 → 右栏整体（.ed-rail）负责滚动；
+      //   迁移态 → 目录自身（.toc）被 CSS 限高，成为独立滚动区。
+      // 这里取"离链接最近、且确实溢出"的那个容器，两种形态都能
+      // 把高亮项平滑带入视区，不依赖时序。
+      var chain = [active.link.closest('.toc'), active.link.closest('.ed-rail-inner'), active.link.closest('.ed-rail')];
+      var box = null;
+      for (var k = 0; k < chain.length; k++) {
+        if (chain[k] && chain[k].scrollHeight > chain[k].clientHeight + 4) { box = chain[k]; break; }
+      }
+      if (box) {
+        var lr = active.link.getBoundingClientRect();
+        var rr = box.getBoundingClientRect();
+        if (lr.top < rr.top || lr.bottom > rr.bottom) {
+          box.scrollTop += lr.top - rr.top - rr.height / 2 + lr.height / 2;
+        }
+      }
+    }
+
+    // 目录高亮锚点：标题顶边越过该线即算"当前"。
+    // 与顶部留白（--ed-top: 24px）保持同一量级，
+    // 取值略大以免标题刚露头就跳高亮。
+    var OFFSET = 72;
+    function spy() {
+      if (!headings.length) return;
+      var current = headings[0];
+      for (var i = 0; i < headings.length; i++) {
+        if (headings[i].el.getBoundingClientRect().top - OFFSET <= 0) current = headings[i];
+        else break;
+      }
+      setActive(current);
+    }
+
+    /* ================================================================
+       3. 主题切换：代理到主题隐藏按钮
+       ================================================================ */
+    var proxy = document.getElementById('theme-toggle');
+    var vis = document.getElementById('ed-theme-visible');
+    if (proxy && vis) {
+      vis.addEventListener('click', function () { proxy.click(); });
+    }
+
+    var ticking = false;
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function () {
+        update();
+        spy();
+        ticking = false;
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', function () { update(); }, { passive: true });
+    if (mq.addEventListener) mq.addEventListener('change', function () { update(); update(); });
+
+    /* 悬浮块高度随后者字体加载 / 窗口宽度变化而变，
+       用 ResizeObserver 跟踪，把高度同步到 CSS 变量。
+       放在 update() 之后注册，避免首帧读到 0。 */
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () { syncHeights(); });
+      ro.observe(floatEl);
+    }
+
+    update();
+    spy();
+    // 首帧与字体就绪后各校正一次高度（immediate，不等防抖）
+    syncHeights(true);
+    window.addEventListener('load', function () { update(); syncHeights(true); });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () { update(); syncHeights(true); });
+    }
+  })();
+</script>
+
+{{ end }}{{/* end main */}}

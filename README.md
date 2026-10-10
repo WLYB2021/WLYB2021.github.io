@@ -18,11 +18,16 @@
 │   └── posts/                   # 博客文章
 │       ├── first-post.md        # 示例文章（可删，保留作为写作参考）
 │       └── second-post.md       # 示例文章（可删）
-├── layouts/partials/
-│   ├── comments.html            # 覆盖主题评论模板，接入 giscus
-│   └── giscus.html              # Giscus 嵌入组件
+├── layouts/
+│   ├── index.html               # 覆盖主题首页：渲染个人名片 + 文章流
+│   └── partials/
+│       ├── profile_card.html    # 个人名片（覆盖主题失效的 profile 实现）
+│       ├── comments.html        # 覆盖主题评论模板，接入 giscus
+│       └── giscus.html          # Giscus 嵌入组件
 ├── assets/css/extended/
-│   └── custom.css               # 定制样式（首页 Hero、卡片、表格等）
+│   └── custom.css               # 定制样式（首页 Hero、卡片、表格、名片等）
+├── archetypes/
+│   └── default.md               # 新文章脚手架：hugo new posts/xxx.md
 ├── static/
 │   ├── favicon.svg              # 站点图标
 │   └── images/                  # 头像、分享图等静态资源
@@ -90,21 +95,40 @@ hugo server --bind 0.0.0.0 --port 1313
 
 ## 写新文章
 
-在 `content/posts/` 下新建 `.md`，带上前置元数据：
+用脚手架新建（自动带好front matter，`draft: true` 时不会发布）：
+
+```bash
+hugo new posts/my-first-post.md
+```
+
+手写也可以，前置元数据字段如下：
 
 ```markdown
 ---
 title: "文章标题"
 date: 2026-10-08T10:00:00+08:00
+draft: false
 tags: ["Android", "Kotlin"]
 categories: ["技术实践"]
-description: "一句话摘要，显示在列表页"
+description: "一句话摘要，显示在首页卡片与搜索结果"
+summary: "可选，列表页摘要；留空则自动截取正文"
 ---
-
-正文内容…
 ```
 
 推送到 main 分支即自动发布。
+
+## 站点结构说明
+
+**首页**由 `layouts/index.html` 渲染，依次为：
+
+1. 侧边栏个人名片（`params.profile`：头像、姓名、简介、社交图标、按钮）
+2. `content/_index.md` 的正文（Hero、技术栈卡片、作品集）
+3. 文章流（`homePostsLimit` 控制条数，默认 5）
+
+> PaperMod v8.0 的原生profile 模式依赖 `profileMode` / `socialIcons` 等旧键名，
+> 与当前配置（`params.profile` / `params.social`）不一致，实际不生效。
+> 因此本模板用 `layouts/partials/profile_card.html` 接管了名片渲染。
+> 修改名片样式请改该partial + `custom.css`，不要改主题源码。
 
 ## 需要替换的占位符
 
@@ -113,18 +137,19 @@ description: "一句话摘要，显示在列表页"
 
 | 位置 | 文件 | 占位内容 |
 |---|---|---|
-| 作者名 | `hugo.toml` | `YOUR_NAME`（`title`、`params.author`、`profile.title`、版权行） |
+| 作者名 | `hugo.toml` | `YOUR_NAME`（`title`、`params.author`、`profile.title`、`imageTitle`、版权行） |
 | 个人简介 | `hugo.toml` | `profile.subtitle`、`params.description` |
-| 导航菜单 | `hugo.toml` | `[[menu.main]]` 四项，按需增删改`url` |
-| 邮箱 | `hugo.toml` | `you@example.com`（不公开联系方式可删掉该 `[[params.social]]` 段） |
+| 头像 | `hugo.toml` + `static/images/` | `profile.imageUrl` 留空则不显示；填如 `images/avatar.jpg` |
+| 导航菜单 | `hugo.toml` | `[[menu.main]]` 四项，按需增删改 `url` |
+| 邮箱 | `hugo.toml` | `you@example.com`（不公开联系方式可删掉两个 `[[params.social]]` 段） |
 | SEO 关键词 | `hugo.toml` | `params.keywords`（5~10 个真实主题词） |
 | 分享图 | `static/images/` | `og-default.png`，建议 1200×630 |
-| 站点图标 | `static/favicon.svg` | 默认深底白"F"，可替换 |
-| 首页内容 | `content/_index.md` | Hero、技术栈卡片、作品集、最近文章 |
+| 站点图标 | `static/favicon.svg` | 默认深底白 "F"，可替换 |
+| 首页内容 | `content/_index.md` | Hero、技术栈卡片、作品集 |
 | 关于页 | `content/about.md` | 自我介绍、联系方式 |
 | 项目链接 | `content/_index.md`、`about.md` | `github.com/WLYB2021/project` |
 | 示例文章 | `content/posts/` | `first-post.md`、`second-post.md` 可直接删除 |
-| 头像 | `static/images/` | 未放图片时侧边栏不显示头像 |
+| 文章配图 | `static/images/` | 正文引用的图片放这里，front matter 写 cover即可 |
 
 ## 功能开关
 
