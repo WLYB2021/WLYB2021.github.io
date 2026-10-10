@@ -1,6 +1,9 @@
 ---
 title: "关于"
 url: "/about/"
+# 用简单页面模板，不用文章页的双栏 + 目录 + 悬浮迁移：
+# 首页的单页导航会把 /about/ 加载进右列内容区，那套结构会嵌套冲突。
+layout: "plain"
 description: "关于这个博客和 Xi · 记录值得输出的内容"
 showToc: false
 ShowReadingTime: false

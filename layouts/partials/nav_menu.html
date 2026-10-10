@@ -1,18 +1,35 @@
 {{- /*
   导航菜单（可复用）
   ---------------------------------------------------------------
-  从主题 header.html 抽出 <ul id="menu"> 的渲染逻辑，供首页报头复用。
-  保持 active 高亮与外链图标行为一致。
+  从主题 header.html 抽出顶栏菜单 <ul id="menu"> 的渲染逻辑，
+  供首页报头与文章页悬浮入口复用。保持 active 高亮与外链图标行为一致。
+
+  为什么 id 用 ed-menu 而不是 menu：
+    主题的 header.html 已经渲染了一份 <ul id="menu">（顶栏，首页被 CSS 隐藏），
+    本 partial 若再产出同 id 会撞成重复 id —— HTML 非法，且 footer 脚本的
+    getElementById('menu') 只会命中顶栏那一份，滚动位置记忆于是绑错对象。
+  为什么仍保留 id（而不是只用 class）：
+    主题 header.css 里有 `#menu { margin: auto var(--gap) }`、
+    `#menu li + li { margin-inline-start: var(--gap) }` 等 ID 级规则，
+    若本 partial 只给 class，特异性不足会被反压，导航会相对刊名缩进。
+  链接为什么用相对地址（relURL）而不是 absLangURL：
+    单语言站点（defaultContentLanguage = zh，无多语言版本）用 absLangURL
+    只会把线上域名硬写进每个 href（https://wlyb2021.github.io/posts/），
+    带来的问题：本地预览时导航会跳到线上站点；换自定义域、部署到子路径
+    时全部要重改。改用 relURL 后 href 是 /posts/ 这样的根相对路径，
+    本地 / 线上 / 换域名行为一致 —— 首页的单页导航也才能用
+    location.origin 直接判断是否站内（否则本地预览会全部判成跨域）。
+    若将来真的开多语言，再换回 absLangURL 即可。
   参数：. = 当前 page
 */ -}}
 {{- $currentPage := . -}}
-<ul id="menu" class="ed-menu">
+<ul id="ed-menu" class="ed-menu">
   {{- range site.Menus.main }}
-  {{- $menu_item_url := (cond (strings.HasSuffix .URL "/") .URL (printf "%s/" .URL) ) | absLangURL }}
-  {{- $page_url:= $currentPage.Permalink | absLangURL }}
+  {{- $menu_item_url := (cond (strings.HasSuffix .URL "/") .URL (printf "%s/" .URL) ) | relURL }}
+  {{- $page_url:= $currentPage.RelPermalink | relURL }}
   {{- $is_search := eq (site.GetPage .KeyName).Layout `search` }}
   <li>
-    <a href="{{ .URL | absLangURL }}" title="{{ .Title | default .Name }}"
+    <a href="{{ .URL | relURL }}" title="{{ .Title | default .Name }}"
       {{- cond $is_search (" accesskey=/" | safeHTMLAttr) ("" | safeHTMLAttr ) }}>
       <span {{- if eq $menu_item_url $page_url }} class="active" {{- end }}>
         {{- .Pre }}

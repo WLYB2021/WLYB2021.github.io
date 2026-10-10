@@ -1,0 +1,126 @@
+{{- /*
+  搜索页（覆盖主题 search.html）
+  ---------------------------------------------------------------
+  为什么自建：主题的搜索依赖两样东西——
+    1. fastsearch.js（含 fuse.js），只在 .Layout == "search" 的 <head> 里加载；
+    2. 它的初始化写在 window.onload 里。
+  首页单页导航把 /search/ 塞进右列时，这两样都不会发生：脚本没被加载，
+  onload 也早已触发 —— 搜索框会是个死框。
+  本版改为「零依赖 + 立即执行」：直接 fetch /index.json，自己做子串匹配
+  与高亮，脚本随内容一起注入（由首页的 runScripts 执行），因此整页打开
+  与右列切换都能用。文章量在百篇以内时，这个实现足够。
+
+  匹配规则：空格分词，所有词都命中才算匹配；标题命中排在前面。
+*/ -}}
+{{ define "main" }}
+
+{{- /* 统一栏目头（与首页、列表、标签、归档、关于同一套） */ -}}
+{{- partial "page_head.html" (dict "title" .Title "desc" .Description) }}
+
+<div class="ed-search">
+  <input id="ed-search-input" class="ed-search-input" type="search" autocomplete="off" maxlength="64"
+    placeholder="输入关键词，回车搜索" aria-label="搜索关键词">
+  <p id="ed-search-status" class="ed-search-status" role="status">正在载入索引…</p>
+  <ul id="ed-search-results" class="ed-search-results" aria-label="搜索结果"></ul>
+</div>
+
+<script>
+  (function () {
+    var input = document.getElementById('ed-search-input');
+    var list = document.getElementById('ed-search-results');
+    var status = document.getElementById('ed-search-status');
+    if (!input || !list) return;
+
+    var docs = [];
+
+    /* index.json 里的 permalink 是绝对地址；转成路径，避免本地预览时
+       点结果跳到线上域名。 */
+    function localPath(u) {
+      try { return new URL(u, location.href).pathname; } catch (e) { return u; }
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+
+    /* 命中位置前后取一段，用于结果摘要 */
+    function snippet(text, terms) {
+      var lower = text.toLowerCase();
+      var at = -1;
+      for (var i = 0; i < terms.length; i++) {
+        var p = lower.indexOf(terms[i]);
+        if (p >= 0 && (at < 0 || p < at)) at = p;
+      }
+      if (at < 0) at = 0;
+      var start = Math.max(0, at - 40);
+      var frag = text.slice(start, start + 160).replace(/\s+/g, ' ');
+      terms.forEach(function (t) {
+        var re = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        frag = frag.replace(re, '<mark>$1</mark>');
+      });
+      return (start > 0 ? '…' : '') + esc(frag).replace(/&lt;mark&gt;/g, '<mark>').replace(/&lt;\/mark&gt;/g, '</mark>');
+    }
+
+    function render(q) {
+      var terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      list.innerHTML = '';
+      if (!terms.length) { status.textContent = docs.length ? '共 ' + docs.length + ' 篇可搜。' : ''; return; }
+
+      var hits = [];
+      docs.forEach(function (d) {
+        var titleLower = d.title.toLowerCase();
+        var bodyLower = (d.content || '').toLowerCase();
+        var ok = true, score = 0;
+        terms.forEach(function (t) {
+          if (titleLower.indexOf(t) >= 0) score += 3;
+          else if (bodyLower.indexOf(t) >= 0) score += 1;
+          else ok = false;
+        });
+        if (ok) hits.push({ doc: d, score: score });
+      });
+      hits.sort(function (a, b) { return b.score - a.score; });
+
+      status.textContent = hits.length ? '找到 ' + hits.length + ' 条' : '没有匹配的内容';
+      hits.slice(0, 20).forEach(function (h) {
+        var li = document.createElement('li');
+        li.className = 'ed-search-item';
+        var a = document.createElement('a');
+        a.className = 'ed-search-link';
+        a.href = localPath(h.doc.permalink);
+        var t = document.createElement('span');
+        t.className = 'ed-search-title';
+        t.innerHTML = snippet(h.doc.title, terms);
+        var s = document.createElement('span');
+        s.className = 'ed-search-desc';
+        s.innerHTML = snippet(h.doc.content || '', terms);
+        a.appendChild(t);
+        a.appendChild(s);
+        li.appendChild(a);
+        list.appendChild(li);
+      });
+    }
+
+    fetch('/index.json', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        docs = (data || []).map(function (d) {
+          return { title: d.title || '', content: (d.content || '').replace(/\s+/g, ' '), permalink: d.permalink };
+        });
+        status.textContent = '索引就绪，共 ' + docs.length + ' 篇。';
+        if (input.value) render(input.value);
+      })
+      .catch(function () {
+        status.textContent = '索引加载失败，请刷新页面重试。';
+      });
+
+    var timer = null;
+    input.addEventListener('input', function () {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () { render(input.value); }, 120);
+    });
+  })();
+</script>
+
+{{ end }}

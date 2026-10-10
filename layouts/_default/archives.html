@@ -1,0 +1,56 @@
+{{- /*
+  归档页（覆盖主题 archives.html）
+  ---------------------------------------------------------------
+  为什么自建：主题版输出 .archive-year / .archive-month / .archive-entry，
+  样式来自主题的 archive.css（月份分组、下划线标题、独立字号体系），
+  与本站编辑风（栏目头 + 发丝线行列表）观感割裂；而单页导航开启后
+  /archives/ 会常驻右列，差异更明显。
+  本版结构：统一栏目头 → 按年份分节（年份作为小 kicker）→ 卡片流。
+  卡片直接复用 .ed-card*（与首页、/posts/ 完全同一套），只是把序号位
+  换成"月-日"，归档场景下日期比序号有用。
+*/ -}}
+{{ define "main" }}
+{{- partial "spa_handoff.html" . -}}
+
+{{- $pages := where site.RegularPages "Type" "in" site.Params.mainSections -}}
+{{- $pages = sort $pages "Date" "desc" -}}
+
+{{- partial "page_head.html" (dict
+      "title" .Title
+      "desc" .Description
+      "count" (len $pages)
+      "countLabel" "篇") }}
+
+{{- with .Content }}<div class="post-content">{{ partial "anchored_headings.html" . }}</div>{{ end -}}
+
+{{- range $pages.GroupByPublishDate "2006" }}
+{{- if ne .Key "0001" }}
+<section class="ed-arc-year">
+  <div class="ed-grid-head ed-arc-head">
+    <span class="ed-kicker">{{ .Key }}</span>
+    <span class="ed-grid-count">{{ len .Pages }} 篇</span>
+  </div>
+  {{- /* 与首页、/posts/ 同一套杂志式卡片，只是序号位换成"月-日" ——
+         归档场景下日期比序号有用。 */ -}}
+  <div class="ed-cards">
+    {{- range .Pages }}
+    <article class="ed-card">
+      <a class="ed-card-link" href="{{ .RelPermalink }}" aria-label="{{ .Title }}"></a>
+      <span class="ed-card-num ed-card-num--date">{{ .Date | time.Format "01-02" }}</span>
+      <div class="ed-card-body">
+        <h2 class="ed-card-title">{{ .Title }}</h2>
+        {{- with .Description }}
+        <p class="ed-card-desc">{{ . | plainify | htmlUnescape }}</p>
+        {{- else }}
+        <p class="ed-card-desc">{{ .Summary | plainify | htmlUnescape | truncate 120 }}</p>
+        {{- end }}
+        <div class="ed-card-meta">{{- partial "post_meta.html" . -}}</div>
+      </div>
+    </article>
+    {{- end }}
+  </div>
+</section>
+{{- end }}
+{{- end }}
+
+{{ end }}

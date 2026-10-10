@@ -1,0 +1,31 @@
+{{- /*
+  统一栏目头（所有内容区共用）
+  ---------------------------------------------------------------
+  参数（dict）：
+    title      栏目名，必填
+    count      右侧计数，可选（数字）
+    countLabel 计数单位，可选（如 "篇" / "篇 · 持续更新"）
+    desc       栏目说明，可选，渲染为头下的一行小字
+    link       右侧替代计数的链接（dict "url" "text"），可选
+
+  形式：大号衬线栏目名（与左列刊名同一字体族，形成"刊名 / 栏目"的呼应）
+  + 右侧计数 + 3px 粗线。首页、文章、标签、归档、关于、搜索共用一个组件，
+  切换标签时页头不跳。
+*/ -}}
+{{- $title := .title -}}
+{{- $count := .count -}}
+{{- $countLabel := .countLabel | default "篇" -}}
+{{- $desc := .desc -}}
+{{- $link := .link -}}
+
+<div class="ed-head">
+  <h1 class="ed-head-title">{{ $title }}</h1>
+  {{- if $link }}
+  <a class="ed-head-count ed-head-link" href="{{ $link.url }}">{{ $link.text }}</a>
+  {{- else if $count }}
+  <span class="ed-head-count">{{ $count }} {{ $countLabel }}</span>
+  {{- end }}
+</div>
+{{- with $desc }}
+<p class="ed-head-desc">{{ . | markdownify }}</p>
+{{- end }}

@@ -1,0 +1,25 @@
+{{- /*
+  正文图片渲染钩子（覆盖主题 _markup/render-image.html）
+  ---------------------------------------------------------------
+  主题版只有 loading="lazy"。这里补两件事：
+    1. decoding="async"：解码不阻塞主线程；
+    2. width/height：从页面资源（或 static/global resources）读出真实尺寸，
+       让浏览器在图片加载前就占好位，避免 CLS（累计布局偏移）。
+  站点文章目前以文字为主，这是为后续配图做的前瞻加固。
+  找不到尺寸时（外链图）安全降级为不带宽高，行为与主题一致。
+*/ -}}
+{{- $u := urls.Parse .Destination -}}
+{{- $img := "" -}}
+{{- if not $u.IsAbs -}}
+  {{- $path := strings.TrimPrefix "./" $u.Path -}}
+  {{- with .PageInner -}}
+    {{- $img = .Resources.GetMatch $path -}}
+  {{- end -}}
+  {{- if not $img -}}
+    {{- $img = resources.Get $path -}}
+  {{- end -}}
+{{- end -}}
+
+<img loading="lazy" decoding="async" src="{{ .Destination | safeURL }}" alt="{{ .Text }}"
+  {{- with .Title }} title="{{ . }}"{{ end }}
+  {{- with $img }} width="{{ .Width }}" height="{{ .Height }}"{{ end }} />

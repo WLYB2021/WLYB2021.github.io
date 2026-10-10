@@ -1,0 +1,25 @@
+{{- /*
+  404 页（覆盖主题 layouts/404.html）
+  ---------------------------------------------------------------
+  为什么不用 content/404.md：
+    md 页面走 single 模板，输出路径由 url 决定。写 `url: "/404.html"` 时
+    Hugo 会生成 `public/404.html/index.html`，而 GitHub Pages 只认
+    `/404.html` 这一个确切文件 —— 结果是不生效，访客看到 GitHub 默认错误页。
+    Hugo 在构建时会自动用 layouts/404.html 渲染出站点根的 404.html，
+    这才是 Pages / 多数静态托管认的路径。
+
+  内容沿用编辑风：大号衬线 404 + 一句说明 + 三个去处。
+*/ -}}
+{{ define "main" }}
+<section class="ed-404">
+  <p class="ed-404-code" aria-hidden="true">404</p>
+  <h1 class="ed-404-title">这个页面不存在</h1>
+  <p class="ed-404-desc">可能被移动或删除了。下面是几个还活着的地方。</p>
+  <nav class="ed-404-nav" aria-label="404 导航">
+    <a href="{{ "" | relURL }}">回到首页</a>
+    <a href="{{ "posts/" | relURL }}">浏览文章</a>
+    <a href="{{ "search/" | relURL }}">全站搜索</a>
+    <a href="{{ "archives/" | relURL }}">归档</a>
+  </nav>
+</section>
+{{ end }}

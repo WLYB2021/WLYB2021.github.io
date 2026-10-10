@@ -1,90 +1,373 @@
 {{- /*
-  首页 · 编辑风（双态响应式）
+  首页 · 编辑风
   ---------------------------------------------------------------
-  同一套内容，两种信息架构：
-    窄屏（<1080px）→ 方向 1「全幅报头」：顶部整幅报头（站名居中 +
-      副标题 + 社交），下方文章单栏流（巨号序号 + 衬线标题 + 发丝线）。
-    宽屏（≥1080px）→ 方向 2「左刊名竖栏」：报头收进左侧常驻栏
-      （刊名 + 期号 + 年/篇数 + 社交），右侧文章流。
+  同一套内容，两态布局：
+    窄屏（<1080px）单列：导航 → 报头（居中）→ 最新文章 → 项目
+    宽屏（≥1080px）两列：左列报头（固定）｜右列 导航（吸顶）+ 内容区
 
-  实现：报头 .ed-masthead 为独立块，窄屏置顶、宽屏由 CSS grid 挪入左栏；
-  文章流 .ed-grid 始终单列（不做双列拼贴）。旧的 profile_card 与刊头已移除。
+  内容区结构与其他标签页完全对齐：
+    · 栏目头统一走 partials/page_head.html
+    · 文章列表与 /posts/ / 归档 共用 .ed-card* 杂志式卡片流
+    · 项目区块复用栏目头的 kicker 样式做小标题
+  早期方案（profile_card、刊头、hero 式大卡片）已被这套卡片流取代。
 */ -}}
 {{ define "main" }}
+  {{- /* 页面级参数：site.Params.home.*（见 hugo.toml），均有缺省 */ -}}
+  {{- $home := site.Params.home | default dict -}}
+  {{- $heading := $home.postsHeading | default "最新文章" -}}
+  {{- $limit := int (default 0 $home.postsLimit) -}}
+  {{- $showMeta := $home.showMeta | default true -}}
   {{- $social := site.Params.social -}}
+  {{- $profile := site.Params.profile | default dict -}}
   {{- $pages := (where site.RegularPages "Type" "in" site.Params.mainSections) -}}
   {{- $pages = sort $pages "Date" "desc" -}}
+  {{- /* 首页最多展示 postsLimit 篇（0 = 全部）；序号仍按全站位次计算 */ -}}
+  {{- $shown := $pages -}}
+  {{- if gt $limit 0 }}{{ $shown = first $limit $pages }}{{ end -}}
 
-  <section class="ed-front">
+  {{- /*
+    整体架构：
+      左列 = header（宽屏固定 sticky，从页面最顶端开始）
+      右列 = 导航（第 1 行，与 header 顶边齐平） + 内容区（第 2 行，随页面滚动）
+
+    DOM 顺序 = 窄屏顺序：导航 → header → 内容（窄屏导航在最上方）。
+    宽屏由 grid 重新排布：nav 进右列第 1 行，header 占左列并跨两行
+    （跨行是为了让它有 sticky 的位移空间 —— 只在第 1 行的话，活动范围
+    仅等于导航条高度，等于固定不住），内容区进右列第 2 行。
+
+    导航刻意不做成通栏、也不吸顶：通栏会"侵占"左列顶部，把 header 压到
+    导航条下面；左列才是这个页面要固定的那一块。
+  */ -}}
+  {{- /* data-home-path：脚本用来判断"当前是不是首页路径"，避免硬编码域名。 */ -}}
+  <section class="ed-front" data-home-path="{{ "" | absLangURL }}">
     {{- if $pages }}
-      {{- /* 报头：承担全站导航（顶栏在首页隐藏）；窄屏置顶 / 宽屏移入左栏 */ -}}
+      {{- /* --- 导航：窄屏置顶；宽屏为右列第 1 行 --- */ -}}
+      <nav class="ed-front-nav" aria-label="站点导航">
+        {{- partial "nav_menu.html" . }}
+      </nav>
+
+      {{- /* ============ 左列：刊头（窄屏随流，宽屏固定，从顶端开始） ============ */ -}}
       <header class="ed-masthead">
         <div class="ed-masthead-top">
           <div class="ed-masthead-title">{{ site.Title }}</div>
-          <div class="ed-masthead-dek">{{ site.Params.description | default site.Params.profile.subtitle }}</div>
+          <div class="ed-masthead-dek">{{ site.Params.description | default $profile.subtitle }}</div>
+          {{- with $profile.desc }}
+          <div class="ed-masthead-desc">{{ . }}</div>
+          {{- end }}
         </div>
-        <nav class="ed-masthead-nav" aria-label="站点导航">
-          {{- partial "nav_menu.html" . }}
-          <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="切换主题">
-            <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
-            <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="20" height="16" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="12" y1="1" x2="12" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="23"></line>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-              <line x1="1" y1="12" x2="3" y2="12"></line>
-              <line x1="21" y1="12" x2="23" y2="12"></line>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
-          </button>
-        </nav>
+
         <div class="ed-masthead-foot">
           <span class="ed-masthead-issue">{{ now.Format "2006" }} · {{ len $pages }} 篇</span>
-          {{- with $social }}
-          <div class="ed-social">
-            {{- range . }}
-            {{- $href := .url -}}
-            {{- if and (eq .icon "email") site.Params.email }}{{ $href = printf "mailto:%s" site.Params.email }}{{ end -}}
-            <a href="{{ $href | safeURL }}" target="_blank" rel="noopener noreferrer me"
-               title="{{ .name }}" aria-label="{{ .name }}">{{ partial "svg.html" . }}</a>
+          <div class="ed-masthead-links">
+            {{- with $social }}
+            <div class="ed-social">
+              {{- range . }}
+              {{- $href := .url -}}
+              {{- if and (eq .icon "email") site.Params.email }}{{ $href = printf "mailto:%s" site.Params.email }}{{ end -}}
+              <a href="{{ $href | safeURL }}" target="_blank" rel="noopener noreferrer me"
+                 title="{{ .name }}" aria-label="{{ .name }}">{{ partial "svg.html" . }}</a>
+              {{- end }}
+            </div>
             {{- end }}
+            {{- /* 主题切换按钮。
+                   注意两点：
+                   1. id 不能叫 theme-toggle —— 顶栏（被 body.home .header 隐藏）
+                      里已经有一个同 id 的按钮，主题的 footer 脚本用
+                      getElementById("theme-toggle") 绑定，只会命中顶栏那一个，
+                      首页这个可见按钮就成了"点了没反应"。改为 ed-home-theme-toggle，
+                      再由本页末尾的脚本把点击代理给顶栏那个。
+                   2. 不写 accesskey —— 顶栏按钮已有 accesskey="t"，Alt+T 会触发它
+                      （隐藏元素同样响应），重复声明只会让两个元素抢同一个快捷键。 */ -}}
+            <button class="ed-theme-toggle" id="ed-home-theme-toggle" title="切换主题" aria-label="切换主题">
+              {{- partial "theme_icon.html" (dict "iconIDPrefix" "home") -}}
+            </button>
           </div>
-          {{- end }}
         </div>
+
       </header>
 
-      {{- /* 文章流：始终单列，宽屏在右列 */ -}}
-      <div class="ed-body">
-        <div class="ed-grid-head">
-          <span class="ed-kicker">文章</span>
-          <span class="ed-grid-count">{{ len $pages }} 篇 · 持续更新</span>
-        </div>
-        <div class="ed-grid">
-          {{- /* 序号 = 全站第几篇（按发布日期升序）：最早的为 01。
-                 $pages 已按日期倒序（新→旧），故用 len($pages) - $i 反推。 */ -}}
-          {{- $total := len $pages -}}
-          {{- range $i, $p := $pages }}
-          <article class="ed-card">
-            <a class="ed-card-link" href="{{ $p.Permalink }}" aria-label="{{ $p.Title }}"></a>
-            <span class="ed-card-num">{{ printf "%02d" (sub $total $i) }}</span>
-            <div class="ed-card-body">
-              <h2 class="ed-card-title">{{ $p.Title }}</h2>
-              <p class="ed-card-desc">{{ $p.Summary | plainify | htmlUnescape }}</p>
-              <div class="ed-card-meta">{{- partial "post_meta.html" $p -}}</div>
-            </div>
-          </article>
+      {{- /* ============ 右列第 2 行：内容区（SPA 切换时替换这里） ============ */ -}}
+      <div class="ed-body" id="ed-content" tabindex="-1">
+
+        {{- /* --- 最新文章：栏目头 + 列表（与 /posts/ 完全同一套结构与样式） --- */ -}}
+        <div class="ed-posts">
+          {{- partial "page_head.html" (dict
+                "title" $heading
+                "count" (len $pages)
+                "countLabel" "篇 · 持续更新") }}
+
+          <div class="ed-cards">
+            {{- /* 序号 = 全站第几篇（按发布日期升序）：最早的为 01。
+                   $pages 已按日期倒序（新→旧），故用 len($pages) - $i 反推。 */ -}}
+            {{- $total := len $pages -}}
+            {{- range $i, $p := $shown }}
+            {{- /* 杂志式卡片：绝对定位覆盖式链接 + 巨号描边序号 + 衬线标题。
+                   与 /posts/、/archives/ 用同一套结构与样式。 */ -}}
+            <article class="ed-card">
+              {{- /* 文章详情：整页跳转（不进右列内容区）。
+                     文章页有自己的双栏 + 目录 + 迁移脚本，塞进右列会嵌套冲突，
+                     因此不做 SPA 切换，交给浏览器正常导航即可。 */ -}}
+              <a class="ed-card-link" href="{{ $p.RelPermalink }}" aria-label="{{ $p.Title }}"></a>
+              <span class="ed-card-num">{{ printf "%02d" (sub $total $i) }}</span>
+              <div class="ed-card-body">
+                <h2 class="ed-card-title">{{ $p.Title }}</h2>
+                {{- with $p.Description }}
+                <p class="ed-card-desc">{{ . | plainify | htmlUnescape }}</p>
+                {{- else }}
+                <p class="ed-card-desc">{{ $p.Summary | plainify | htmlUnescape | truncate 120 }}</p>
+                {{- end }}
+                {{- if $showMeta }}
+                <div class="ed-card-meta">{{- partial "post_meta.html" $p -}}</div>
+                {{- end }}
+              </div>
+            </article>
+            {{- end }}
+          </div>
+
+          {{- if or (eq $limit 0) (gt (len $pages) $limit) }}
+          <a class="ed-all" href="{{ "posts/" | relURL }}">查看全部文章 →</a>
           {{- end }}
         </div>
-        <a class="ed-all" href="{{ "posts/" | relURL }}">查看全部文章 →</a>
+
+        {{- /* --- 项目（数据在 data/projects.toml） --- */ -}}
+        {{- /* hugo.Data 而非 site.Data：后者自 Hugo v0.156 起弃用 */ -}}
+        {{- with hugo.Data.projects }}
+        <div class="ed-projects">
+          <div class="ed-projects-head">项目</div>
+          <div class="ed-projects-grid">
+            {{- range .project }}
+            <a class="ed-project" href="{{ .url }}"
+              {{- if strings.HasPrefix .url "http" }} target="_blank" rel="noopener noreferrer"{{ end -}}>
+              <span class="ed-project-name">{{ .name }}</span>
+              <span class="ed-project-desc">{{ .desc }}</span>
+            </a>
+            {{- end }}
+          </div>
+          <a class="ed-projects-more" href="{{ "about/" | relURL }}">更多介绍 →</a>
+        </div>
+        {{- end }}
+
       </div>
     {{- else }}
       <p class="ed-empty">还没有文章，先去 <a href="{{ "about/" | relURL }}">关于</a> 看看。</p>
     {{- end }}
   </section>
+
+  {{- /* 首页主题切换：把可见按钮的点击代理给顶栏那个（顶栏被 CSS 隐藏，
+         但元素仍在，主题的切换逻辑就绑在它身上）。
+         不放在 extend_footer.html —— 那里被 partialCached，缓存键是
+         (.Layout .Kind)，首页与文章页可能复用同一份输出。 */ -}}
+  <script>
+    (function () {
+      var visible = document.getElementById('ed-home-theme-toggle');
+      var host = document.getElementById('theme-toggle');
+      if (visible && host) {
+        visible.addEventListener('click', function () { host.click(); });
+      }
+    })();
+  </script>
+
+  {{- /* ================================================================
+       单页导航：左列 header 与导航行保持不动，只替换右列内容区。
+       ----------------------------------------------------------------
+       设计取舍（为什么不是全站 SPA）：
+         · 只有「列表型」页面能塞进右列：/posts/、/tags/、/tags/xx/、
+           /archives/、首页。它们的结构就是「栏目头 + 卡片流」，放进
+           .ed-body 不需要额外布局。
+         · 文章详情（single.html 自带双栏 + 目录 + 迁移脚本）、
+           关于（同样是文章模板 + Giscus）、搜索（依赖主题的
+           fastsearch.js，只在自己的 <head> 里加载）—— 这三个进右列会
+           嵌套冲突或脚本缺失，因此保持整页跳转。
+         · 渐进增强：不支持 fetch / pushState、或 JS 报错时，
+           所有链接都是普通 <a>，行为与现在完全一致。
+           各页面仍是可直连、可被索引的独立 URL。
+       ================================================================ */ -}}
+  <script>
+    (function () {
+      var front = document.querySelector('.ed-front');
+      var nav = document.querySelector('.ed-front-nav');
+      var box = document.getElementById('ed-content');
+      /* 导航已移出 .ed-front（要做通栏吸顶），点击委托因此挂在 main 上 */
+      var scope = document.querySelector('main.main') || front;
+      if (!front || !nav || !box || !scope) return;
+      if (!window.history || !history.pushState || !window.fetch || !window.DOMParser) return;
+
+      /* 判断"站内链接"要以站点自己的 origin 为基准，不能用 location.origin：
+         导航由 absLangURL 渲染成绝对地址（https://wlyb2021.github.io/posts/），
+         而本地预览跑在 http://localhost:1313 —— 拿 location.origin 去比会全部
+         判成跨域，拦截器直接放行，表现就是"点了没反应"（变成整页跳转）。
+         请求与 pushState 仍用相对路径，本地预览因此也能正常取到内容。 */
+      var homePath = '/';
+      var siteOrigin = location.origin;
+      try {
+        var homeURL = new URL(front.getAttribute('data-home-path'), location.href);
+        homePath = homeURL.pathname || '/';
+        siteOrigin = homeURL.origin || location.origin;
+      } catch (e) {}
+
+      var initialHTML = box.innerHTML;
+      var initialTitle = document.title;
+      var cache = Object.create(null);
+      var currentPath = location.pathname;
+
+      /* 吸顶导航的高度同步到 CSS 变量：内容区靠它让出顶部空间。
+         不写死像素，因为菜单项换行 / 字号变化都会改高度。 */
+      function syncNavHeight() {
+        var h = nav.offsetHeight;
+        if (h > 0) document.documentElement.style.setProperty('--ed-nav-h', h + 'px');
+      }
+      syncNavHeight();
+      window.addEventListener('resize', syncNavHeight, { passive: true });
+      window.addEventListener('load', syncNavHeight);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncNavHeight);
+
+      /* 规范化：去掉尾斜杠与 index.html，便于比较 /posts 与 /posts/ */
+      function norm(p) {
+        p = String(p || '/').split('?')[0].split('#')[0];
+        p = p.replace(/\/index\.html$/, '/');
+        if (p.length > 1) p = p.replace(/\/+$/, '');
+        return p || '/';
+      }
+
+      /* 文章详情页：/posts/<slug>/ —— 独立标签页，不进右列 */
+      function isArticle(p) {
+        p = norm(p);
+        if (p.indexOf('/posts/') !== 0) return false;
+        return p.indexOf('/posts/page/') !== 0;   /* /posts/page/2/ 是列表分页，不算 */
+      }
+
+      /* 白名单：可在右列打开的内容
+           /posts/ 与其分页   → 是（列表）
+           /posts/<slug>/     → 否（文章详情，整页跳转）
+           /tags/、/tags/x/   → 是（列表）
+           /archives/         → 是
+           /about/、/search/  → 是（各自用了可在右列工作的模板：
+                                about 走 page.html 的朴素结构，
+                                search 走自建的零依赖搜索页） */
+      function isSpaPath(p) {
+        p = norm(p);
+        if (p === norm(homePath)) return true;
+        if (p === '/posts' || p.indexOf('/posts/page/') === 0) return true;
+        if (p === '/tags' || p.indexOf('/tags/') === 0) return true;
+        if (p === '/archives') return true;
+        if (p === '/about' || p === '/search') return true;
+        return false;
+      }
+
+      function entryFor(path) {
+        if (norm(path) === norm(homePath)) {
+          return { html: initialHTML, title: initialTitle };
+        }
+        return cache[norm(path)] || null;
+      }
+
+      /* innerHTML 注入的 <script> 不会执行，需要搬一次 */
+      function runScripts(root) {
+        var list = root.querySelectorAll('script');
+        Array.prototype.forEach.call(list, function (old) {
+          var s = document.createElement('script');
+          Array.prototype.forEach.call(old.attributes, function (a) {
+            if (a.name !== 'src') s.setAttribute(a.name, a.value);
+          });
+          if (old.src) { s.src = old.src; }
+          else { s.textContent = old.textContent; }
+          document.head.appendChild(s);
+          if (!old.src) document.head.removeChild(s);
+        });
+      }
+
+      /* 导航项的高亮由 <span> 承载（nav_menu.html 的结构） */
+      function markActive(path) {
+        var target = norm(path);
+        Array.prototype.forEach.call(nav.querySelectorAll('a[href]'), function (a) {
+          var href;
+          try { href = new URL(a.getAttribute('href'), location.href).pathname; } catch (e) { return; }
+          var span = a.querySelector('span');
+          if (span) span.className = (norm(href) === target) ? 'active' : '';
+        });
+      }
+
+      function apply(entry, path, push) {
+        box.innerHTML = entry.html;
+        runScripts(box);
+        document.title = entry.title;
+        markActive(path);
+        currentPath = path;
+        if (push) history.pushState({ path: path }, '', path);
+        window.scrollTo(0, 0);
+        /* 键盘/读屏用户：把焦点带进新内容区 */
+        box.focus({ preventScroll: true });
+      }
+
+      function load(path, push) {
+        if (norm(path) === norm(currentPath)) { window.scrollTo(0, 0); return; }
+        var cached = entryFor(path);
+        if (cached) { apply(cached, path, push); return; }
+
+        box.classList.add('is-loading');
+        fetch(path, { credentials: 'same-origin' })
+          .then(function (res) {
+            if (!res.ok) throw new Error(res.status);
+            return res.text();
+          })
+          .then(function (text) {
+            var doc = new DOMParser().parseFromString(text, 'text/html');
+            var main = doc.querySelector('main.main') || doc.querySelector('main');
+            var entry = {
+              html: main ? main.innerHTML : '<p class="ed-empty">内容加载失败。</p>',
+              title: (doc.title || document.title)
+            };
+            cache[norm(path)] = entry;
+            apply(entry, path, push);
+          })
+          .catch(function () {
+            /* 抓取失败就退回整页跳转，不让用户卡住 */
+            location.href = path;
+          })
+          .then(function () {
+            box.classList.remove('is-loading');
+          });
+      }
+
+      /* 导航行 + 内容区里的站内链接（如分页、标签）都走切换 */
+      scope.addEventListener('click', function (e) {
+        if (e.defaultPrevented || e.button !== 0) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        var a = e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a) return;
+        if (a.target && a.target !== '_self' && a.target !== '') return;
+        if (a.hasAttribute('download') || a.getAttribute('rel') === 'external') return;
+
+        var url;
+        try { url = new URL(a.getAttribute('href'), location.href); } catch (err) { return; }
+        /* 站外链接照常跳转。导航已改用相对地址，origin 通常就是 location.origin；
+           仍兼容 absLangURL 时代的绝对地址（与站点 origin 相同也算站内）。 */
+        if (url.origin !== location.origin && url.origin !== siteOrigin) return;
+
+        /* 文章详情：不拦截，交给浏览器正常整页跳转（不进右列内容区）。 */
+        if (isArticle(url.pathname)) return;
+        if (url.hash && norm(url.pathname) === norm(currentPath)) return;  /* 页内锚点 */
+        if (!isSpaPath(url.pathname)) return;                              /* 其余整页加载 */
+
+        e.preventDefault();
+        load(url.pathname + url.search, true);
+      });
+
+      window.addEventListener('popstate', function () {
+        load(location.pathname + location.search, false);
+      });
+
+      /* 回程：从其他页面（文章 / 列表 / 标签 / 归档 / 关于）经导航跳回首页时，
+         把记忆的目标路径加载进右列，而不是停在首页概览。
+         spa_handoff.html 在那些独立页面上点击站内导航时写入 sessionStorage。 */
+      try {
+        var pending = sessionStorage.getItem('edSpaTarget');
+        if (pending) {
+          sessionStorage.removeItem('edSpaTarget');
+          if (norm(pending) !== norm(homePath)) load(pending, true);
+        }
+      } catch (e) {}
+
+    })();
+  </script>
 {{ end }}

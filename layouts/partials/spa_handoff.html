@@ -1,0 +1,72 @@
+{{- /*
+  单页导航「回程」逻辑（供首页之外的页面复用）
+  ---------------------------------------------------------------
+  背景：单页导航（SPA）只在首页 .ed-front 内生效。文章页 / 列表 / 标签 /
+  归档 / 关于这些独立页面上的导航（ed-entries 或主题顶栏菜单）目前是普通
+  整页链接，点了会「掉出」SPA —— 落到不带单页导航的独立页面，相当于退回
+  旧版体验；而且主题顶栏菜单渲染的是绝对地址（baseURL），本地预览时点它会
+  直接跳到线上站。
+
+  本脚本让这些页面上的导航也能回到首页 SPA：
+      点击站内目标 → 记下目标路径 → 跳回首页「/」
+      → 首页 SPA 脚本读记忆，把目标加载进右列内容区。
+
+  判定「站内目标」按【路径】而非 origin：
+      目标路径落在 isSpaPath 白名单内即视为站内（/、/posts/、/tags/、
+      /archives/、/about/、/search/ 及其子路径）。这样无论链接是相对地址
+      （ed-entries 的 relURL）还是主题顶栏的绝对地址（baseURL），本地预览
+      （localhost）下都能正确拦截并回程；真正的站外链接（分享按钮、GitHub
+      等）路径不在白名单里，照常放行。
+
+  首页本身（存在 .ed-front，自带 SPA 拦截器）不执行本脚本，避免重复处理。
+*/ -}}
+<script>
+(function () {
+  /* 首页由自己的 SPA 脚本处理，这里跳过 */
+  if (document.querySelector('.ed-front')) return;
+  if (!window.history || !history.pushState || !window.sessionStorage) return;
+
+  /* 与首页 SPA 脚本保持一致的规范化与白名单 */
+  function norm(p) {
+    p = String(p || '/').split('?')[0].split('#')[0];
+    if (p.length > 1) p = p.replace(/\/+$/, '');
+    return p || '/';
+  }
+  function isArticle(p) {
+    p = norm(p);
+    if (p.indexOf('/posts/') !== 0) return false;
+    return p.indexOf('/posts/page/') !== 0;   /* /posts/page/2/ 是列表分页，不算 */
+  }
+  function isSpaPath(p) {
+    p = norm(p);
+    if (p === '/') return true;
+    if (p === '/posts' || p.indexOf('/posts/page/') === 0) return true;
+    if (p === '/tags' || p.indexOf('/tags/') === 0) return true;
+    if (p === '/archives') return true;
+    if (p === '/about' || p === '/search') return true;
+    return false;
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var a = e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    if (a.target && a.target !== '_self' && a.target !== '') return;
+    if (a.hasAttribute('download') || a.getAttribute('rel') === 'external') return;
+
+    var url;
+    try { url = new URL(a.getAttribute('href'), location.href); } catch (err) { return; }
+
+    var path = norm(url.pathname);
+    if (isArticle(path)) return;                         /* 文章详情：整页跳转 */
+    if (url.hash && path === norm(location.pathname)) return; /* 页内锚点 */
+    if (!isSpaPath(path)) return;                        /* 其余（站外等）：照常 */
+
+    e.preventDefault();
+    if (path === norm(location.pathname)) return;        /* 当前页：无需回程 */
+    try { sessionStorage.setItem('edSpaTarget', path); } catch (e2) {}
+    location.href = '/';
+  });
+})();
+</script>

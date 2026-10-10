@@ -34,7 +34,10 @@ FILES=(
 OLD='partial "partials/templates/_funcs/get-page-images"'
 NEW='partial "templates/_funcs/get-page-images"'
 
-echo "==> 修补 PaperMod 兼容性（$THEME_DIR）"
+# 注意：变量用 ${} 包起来。写成 （$THEME_DIR） 时，在 UTF-8 locale（macOS 中文环境）
+# 下 bash 会把紧跟的全角右括号并进变量名，报 "THEME_DIR...: unbound variable"；
+# CI 的 POSIX locale 不触发，于是同样的脚本本地挂、线上过。
+echo "==> 修补 PaperMod 兼容性（${THEME_DIR}）"
 
 for f in "${FILES[@]}"; do
   path="$THEME_DIR/$f"

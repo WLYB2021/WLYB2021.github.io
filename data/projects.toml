@@ -1,0 +1,7 @@
+# 首页「项目」区块的数据源，layouts/index.html 读取。
+# 新增项目：复制一段 [[project]]，name / desc / url 三个字段即可。
+# 只写真正想长期挂首页的项目，避免变成简历式罗列。
+[[project]]
+name = "HMP · Hearable Music Player"
+desc = "本地音乐播放器。KMP + Compose Multiplatform，一套代码跑 Android / iOS / 桌面，已上架 Google Play。"
+url = "https://github.com/InfiniteMotion/HMP"

@@ -1,0 +1,43 @@
+{{- /*
+  普通页面模板（layout: "plain"）
+  ---------------------------------------------------------------
+  为什么要有它：about 这类静态页之前走 single.html（文章页模板），
+  自带双栏 + 目录 + 悬浮迁移脚本。整页打开没问题，但首页的单页导航
+  会把 /about/ 塞进右列内容区 —— 那套双栏结构会嵌套冲突，迁移脚本
+  也会因为容器不在 .ed-shell 里而失效。
+  本模板输出最朴素的结构：栏目头 + 正文（+ 评论），放进右列即正常。
+  用法：在页面 front matter 写 layout: "plain"。
+
+  ⚠️ 为什么不叫 page.html：Hugo ≥0.146 的新模板系统里，_default/page.html
+  是 kind=page 的兜底模板，查找优先级高于 _default/single.html —— 一旦
+  它存在，所有未指定 layout 的文章都会被它劫持（文章页布局整体失效）。
+  改名 plain.html 避开这个坑，只有显式 layout: "plain" 的页面才会用到。
+*/ -}}
+{{ define "main" }}
+{{- partial "spa_handoff.html" . -}}
+
+{{- /* 带上 ed-single 类：正文排版（段落 / 标题 / 引用 / 代码 / 表格的样式
+       都写在 .ed-single .post-content 下），这样普通页与文章页共用一套正文样式，
+       不必复制一份规则。ed-single 里其余规则（.ed-shell / .ed-float / .ed-rail）
+       针对的是文章页专属元素，本模板不产出它们，因此不会有任何副作用。 */ -}}
+<article class="ed-page ed-single">
+  {{- /* 统一栏目头（与首页、列表、标签、归档、搜索同一套） */ -}}
+  {{- if .Title }}
+  {{- partial "page_head.html" (dict "title" .Title "desc" .Description) }}
+  {{- end }}
+
+  {{- /* with 块内 . 会被替换成 .Content，页面参数一律用 $.Param 取 */ -}}
+  {{- with .Content }}
+  <div class="post-content">
+    {{- if not ($.Param "disableAnchoredHeadings") }}
+    {{- partial "anchored_headings.html" . -}}
+    {{- else }}{{ . }}{{ end }}
+  </div>
+  {{- end }}
+
+  {{- if ($.Param "comments") }}
+  {{- partial "comments.html" . }}
+  {{- end }}
+</article>
+
+{{ end }}

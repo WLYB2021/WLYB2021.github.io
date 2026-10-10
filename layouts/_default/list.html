@@ -17,6 +17,7 @@
   分页保留；面包屑移除（全站已用顶部「主页」入口代替）。
 */ -}}
 {{ define "main" }}
+{{- partial "spa_handoff.html" . -}}
 
   {{- $pages := union .RegularPages .Sections -}}
   {{- if .IsHome }}{{ $pages = where site.RegularPages "Type" "in" site.Params.mainSections }}{{ $pages = where $pages "Params.hiddenInHomeList" "!=" "true" }}{{ end -}}
@@ -25,23 +26,20 @@
   {{- $pages = sort $pages "Date" "desc" -}}
   {{- $paginator := .Paginate $pages -}}
 
+  {{- /* 统一栏目头（与首页、标签、归档、关于、搜索同一套） */ -}}
   {{- if .Title }}
-  <header class="page-header ed-page-header">
-    <h1 class="ed-page-title">{{ .Title }}</h1>
-    {{- if .Description }}<div class="post-description ed-page-desc">{{ .Description | markdownify }}</div>{{ end -}}
-    {{- /* 篇数统计：给页头一个"栏目"的实感，也让空白页不至于太空 */ -}}
-    <div class="ed-page-count">
-      <span class="ed-page-count-num">{{ $paginator.TotalNumberOfElements }}</span>
-      <span class="ed-page-count-label">篇</span>
-    </div>
-  </header>
+  {{- partial "page_head.html" (dict
+        "title" .Title
+        "desc" .Description
+        "count" $paginator.TotalNumberOfElements
+        "countLabel" "篇") }}
   {{- end -}}
 
   {{- if .Content }}<div class="post-content">{{ partial "anchored_headings.html" .Content }}</div>{{ end -}}
 
   {{- with $paginator.Pages }}
   <div class="ed-list-wrap">
-    <ol class="ed-li-list">
+    <div class="ed-cards">
       {{- /* 序号 = "全站第几篇"，以最早发布的那篇为 01。
              显示顺序是日期倒序（新的在前），所以编号要倒着数：
              第 1 条显示的是第 N 篇，最后一条显示的是第 01 篇。
@@ -51,25 +49,22 @@
       {{- $firstGlobal := add (mul (sub $paginator.PageNumber 1) $paginator.PagerSize) 1 -}}
       {{- range $i, $p := . }}
       {{- $issueNo := sub (add $total 1) (add $firstGlobal $i) -}}
-      <li class="ed-li-item">
-        <a class="ed-li-link" href="{{ $p.Permalink }}">
-          <span class="ed-li-num">{{ printf "%02d" $issueNo }}</span>
-          <div class="ed-li-body">
-            <h2 class="ed-li-title">{{ $p.Title }}</h2>
-            {{- with $p.Description }}
-            <p class="ed-li-desc">{{ . | plainify | htmlUnescape }}</p>
-            {{- else }}
-            <p class="ed-li-desc">{{ $p.Summary | plainify | htmlUnescape | truncate 120 }}</p>
-            {{- end }}
-            <div class="ed-li-meta">
-              <time datetime="{{ $p.Date.Format "2006-01-02" }}">{{ $p.Date | time.Format "2006 年 1 月 2 日" }}</time>
-              {{- if $p.ReadingTime }}<span class="ed-li-dot">·</span><span>{{ $p.ReadingTime }} 分钟</span>{{ end }}
-            </div>
-          </div>
-        </a>
-      </li>
+      {{- /* 杂志式卡片：与首页、归档同一套结构与样式（.ed-card） */ -}}
+      <article class="ed-card">
+        <a class="ed-card-link" href="{{ $p.RelPermalink }}" aria-label="{{ $p.Title }}"></a>
+        <span class="ed-card-num">{{ printf "%02d" $issueNo }}</span>
+        <div class="ed-card-body">
+          <h2 class="ed-card-title">{{ $p.Title }}</h2>
+          {{- with $p.Description }}
+          <p class="ed-card-desc">{{ . | plainify | htmlUnescape }}</p>
+          {{- else }}
+          <p class="ed-card-desc">{{ $p.Summary | plainify | htmlUnescape | truncate 120 }}</p>
+          {{- end }}
+          <div class="ed-card-meta">{{- partial "post_meta.html" $p -}}</div>
+        </div>
+      </article>
       {{- end }}
-    </ol>
+    </div>
   </div>
   {{- end }}
 

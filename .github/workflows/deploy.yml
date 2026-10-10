@@ -2,11 +2,12 @@ name: Deploy Blog to GitHub Pages
 
 on:
   push:
-    branches: [ "main" ]   # 内容推main 时发布
+    branches: [ "main" ]   # 内容推 main 时发布
   workflow_dispatch:              # 允许手动触发
 
+# 最小权限：构建只读代码；pages 部署靠 pages:write + id-token:write
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -26,19 +27,41 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # fetch-depth: 0 拉全量历史 —— enableGitInfo 依赖它计算 lastmod
           fetch-depth: 0
 
-      # 主题被 .gitignore 排除（不占用仓库体积），需在 CI 单独拉取
+      # 主题被 .gitignore 排除（不占用仓库体积），需在 CI 单独拉取；
+      # 缓存命中时跳过 clone，patch-theme.sh 幂等、可安全重跑
+      - name: Cache theme
+        id: theme-cache
+        uses: actions/cache@v4
+        with:
+          path: themes/PaperMod
+          key: papermod-${{ env.THEME_VERSION }}
+
       - name: Checkout theme
+        if: steps.theme-cache.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 --branch "${THEME_VERSION}" "${THEME_REPO}" themes/PaperMod
+
+      - name: Patch theme
+        run: |
           chmod +x scripts/patch-theme.sh
           ./scripts/patch-theme.sh themes/PaperMod
 
+      # 缓存 Hugo 安装包，省去每次从 GitHub Releases 下载
+      - name: Cache Hugo
+        uses: actions/cache@v4
+        with:
+          path: /tmp/hugo.deb
+          key: hugo-${{ env.HUGO_VERSION }}
+
       - name: Install Hugo
         run: |
-          curl -sSL -o /tmp/hugo.deb \
-            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
+          if [ ! -f /tmp/hugo.deb ]; then
+            curl -sSL -o /tmp/hugo.deb \
+              "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
+          fi
           sudo dpkg -i /tmp/hugo.deb
 
       - name: Setup Pages
@@ -54,6 +77,15 @@ jobs:
         env:
           HUGO_ENV: production
           TZ: Asia/Shanghai
+
+      # 构建产物自检：404 与 sitemap 必须存在，缺失说明站点结构坏了
+      - name: Verify build output
+        run: |
+          test -f public/index.html || { echo "缺少 index.html" >&2; exit 1; }
+          test -f public/404.html || { echo "缺少 404.html" >&2; exit 1; }
+          test -f public/sitemap.xml || { echo "缺少 sitemap.xml" >&2; exit 1; }
+          test -f public/index.xml || { echo "缺少 RSS（index.xml）" >&2; exit 1; }
+          test -f public/images/og-default.png || { echo "缺少 OG 分享图" >&2; exit 1; }
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

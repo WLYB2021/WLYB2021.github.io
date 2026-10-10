@@ -1,0 +1,42 @@
+{{- /*
+  标签/分类总览页（覆盖主题 terms.html）
+  ---------------------------------------------------------------
+  为什么自建：主题输出的是胶囊式标签云（.terms-tags），与本站编辑风
+  （发丝线分隔的行列表）不一致；而单页导航开启后，/tags/ 会常驻右列，
+  风格差异会更明显。
+  版式沿用列表页：栏目头（标题 + 说明 + 计数）→ 行列表（名称 + 篇数）。
+*/ -}}
+{{ define "main" }}
+{{- partial "spa_handoff.html" . -}}
+
+{{- if .Title }}
+{{- /* 判断是哪类 taxonomy 用 .Data.Singular（"tag" / "category"）：
+       .Type 在这里是复数（"tags"），拿它比单数会永远为假。
+       标题优先用页面自身的（content/tags/_index.md 已设中文），
+       未设时按 Singular 给中文兜底 —— 主题 i18n 没有 zh 词条，
+       默认会显示英文 "Tags"。 */ -}}
+{{- $isTag := eq .Data.Singular "tag" -}}
+{{- $title := .Title -}}
+{{- if in (slice "Tags" "tags") $title }}{{ $title = "标签" }}{{ else if in (slice "Categories" "categories") $title }}{{ $title = "分类" }}{{ end -}}
+{{- partial "page_head.html" (dict
+      "title" $title
+      "desc" .Description
+      "count" (len .Data.Terms)
+      "countLabel" (cond $isTag "个标签" "个分类")) }}
+{{- end -}}
+
+{{- $type := .Type -}}
+<ul class="ed-terms">
+  {{- range .Data.Terms.Alphabetical }}
+  {{- with site.GetPage (printf "/%s/%s" $type .Name) }}
+  <li class="ed-term">
+    <a class="ed-term-link" href="{{ .Permalink }}">
+      <span class="ed-term-name">{{ .Name }}</span>
+      <span class="ed-term-count">{{ .Pages.Len }} 篇</span>
+    </a>
+  </li>
+  {{- end }}
+  {{- end }}
+</ul>
+
+{{ end }}

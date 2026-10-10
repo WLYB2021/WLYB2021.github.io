@@ -19,6 +19,7 @@
     4. 窄屏（<1080px）退回单栏常规流，不做迁移。
 */ -}}
 {{ define "main" }}
+{{- partial "spa_handoff.html" . -}}
 
 <article class="post-single ed-single">
   <div class="ed-shell">
@@ -84,6 +85,16 @@
         </div>
       </div>
     </div>
+
+    {{- /* ============ 竖屏悬浮目录：唤起按钮 + 遮罩 ============
+       桌面端隐藏；竖屏且页面有目录时，由 single.html 脚本给
+       .ed-shell 加 .ed-toc-floating，把 .ed-rail 切换为右侧滑入抽屉。 */ -}}
+    <button class="ed-toc-fab" type="button" data-ed-toc-toggle aria-controls="ed-toc-drawer" aria-label="打开目录" aria-expanded="false">
+      <svg class="ed-toc-fab-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M3.5 6h17a.5.5 0 0 1 0 1h-17a.5.5 0 0 1 0-1Zm0 5.5h17a.5.5 0 0 1 0 1h-17a.5.5 0 0 1 0-1Zm0 5.5h17a.5.5 0 0 1 0 1h-17a.5.5 0 0 1 0-1Z"/>
+      </svg>
+    </button>
+    <div class="ed-toc-backdrop" data-ed-toc-backdrop aria-hidden="true"></div>
 
   </div>
 </article>
@@ -278,6 +289,56 @@
     window.addEventListener('load', function () { update(); syncHeights(true); });
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function () { update(); syncHeights(true); });
+    }
+
+    /* ================================================================
+       4. 竖屏：目录悬浮抽屉
+       ----------------------------------------------------------------
+       竖屏（<1080px）时，目录不再内联堆在正文底部，而是由右下角悬浮
+       按钮唤起一个从右侧滑入的浮层抽屉（含遮罩）。桌面端此逻辑不激活，
+       目录仍走原有右栏。
+
+       渐进增强：仅当 JS 判定为竖屏且页面确实有目录时，才给 .ed-shell
+       加 .ed-toc-floating，把 .ed-rail 从"内联块"切换为"固定抽屉"；
+       无 JS 或很窄却无目录时，回落为原始内联目录，保证可读。
+       ================================================================ */
+    var fab = document.querySelector('[data-ed-toc-toggle]');
+    var backdrop = document.querySelector('[data-ed-toc-backdrop]');
+    var mqNarrow = window.matchMedia('(max-width: 1079.98px)');
+
+    function applyFloating() {
+      if (mqNarrow.matches && toc) {
+        shell.classList.add('ed-toc-floating');
+      } else {
+        shell.classList.remove('ed-toc-floating', 'toc-open');
+        document.body.classList.remove('ed-toc-lock');
+      }
+    }
+    function openToc() {
+      shell.classList.add('toc-open');
+      if (fab) fab.setAttribute('aria-expanded', 'true');
+      document.body.classList.add('ed-toc-lock');
+    }
+    function closeToc() {
+      shell.classList.remove('toc-open');
+      if (fab) fab.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('ed-toc-lock');
+    }
+
+    if (fab && backdrop && toc) {
+      fab.addEventListener('click', function () {
+        if (shell.classList.contains('toc-open')) closeToc(); else openToc();
+      });
+      backdrop.addEventListener('click', closeToc);
+      // 点目录项后顺手收起抽屉（锚点跳转交给浏览器默认行为）
+      toc.addEventListener('click', function (e) {
+        if (e.target.closest('a')) closeToc();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && shell.classList.contains('toc-open')) closeToc();
+      });
+      if (mqNarrow.addEventListener) mqNarrow.addEventListener('change', applyFloating);
+      applyFloating();
     }
   })();
 </script>

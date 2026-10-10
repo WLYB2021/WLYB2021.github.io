@@ -5,7 +5,13 @@
    ============================================ */
 
 :root {
-  --ed-serif: "Playfair Display", "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+  /* 标题/刊名衬线栈：只用系统字体，零网络请求（不加载 Web 字体是刻意的：
+     fonts.googleapis.com 在中国大陆常连不通，渲染阻塞会白屏；中文衬线 Web
+     字体动辄数 MB，收益只在标题几个字）。
+     顺序：西文优先落 Georgia，中文按平台落宋体：
+       macOS: Songti SC / STSong · Windows: SimSun · Linux: 思源宋体系 */
+  --ed-serif: Georgia, "Times New Roman", "Songti SC", "STSong",
+              "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
   /* 正文用无衬线：中文屏幕阅读首选黑体类，系统字体即可，不额外加载大体积 Web 字体 */
   --ed-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
              "Microsoft YaHei", "Hiragino Sans GB", "Noto Sans SC", "Source Han Sans SC",
@@ -23,12 +29,34 @@
      1920 下两侧各积压 344px 空白，视觉上就是两条大空带。
      改为 clamp 后，宽屏把富余空间分一部分给正文行宽（仍受 900px 上限约束，
      不会出现超长行），剩下一部分留给侧边呼吸感，空白不再堆积。 */
+  /* ---------- 内容区间距刻度 ----------
+     所有内容区（首页 / 文章 / 标签 / 归档 / 关于 / 搜索）只用这几档，
+     不允许各页各写一套 px：之前正是"栏目头到内容"在四处分别是
+     0 / 8 / 16 / 28px，切换标签时能明显看出跳动。
+       xs 8   —— 紧密元素（计数与标题同一基线等）
+       sm 12  —— 说明行与栏目头
+       md 16  —— 列表行内边距、栏目头下缘
+       lg 24  —— 栏目头 → 内容块
+       xl 32  —— 内容块 → 内容块 */
+  --ed-space-2xs: 4px;
+  --ed-space-xs: 8px;
+  --ed-space-sm: 12px;
+  --ed-space-md: 16px;
+  --ed-space-lg: 24px;
+  --ed-space-xl: 32px;
+
   --ed-measure: 760px;
   --ed-measure-max: 900px;
   --ed-wide: 1080px;        /* 宽屏断点：以下=单栏，以上=分栏 */
   --ed-col-gap: 64px;       /* 正文列 → 目录列 的净间距 */
-  --ed-gutter: 40px;        /* 容器左右内边距（文章页也用它定外框） */
+  --ed-gutter: 40px;        /* 宽屏容器左右内边距（文章页 / 首页 / 列表页共用） */
+  --ed-page-pad-x: 20px;    /* 窄屏左右的页面内边距 */
+  --ed-page-top: 40px;      /* 页面顶部内边距（首页会覆盖成 sm） */
+  --ed-page-bottom: 80px;   /* 页面底部内边距 */
   --ed-top: 16px;           /* 文章页顶部留白 = sticky 吸附距离（两者必须一致） */
+  /* 首页顶部导航条高度。CSS 给的是兜底值，实际由脚本按 offsetHeight 写入，
+     因为菜单项换行时高度会变。内容区据此让出顶部空间，避免被吸顶导航盖住。 */
+  --ed-nav-h: 48px;
 
   /* ---------- 补齐主题缺失的变量 ----------
      PaperMod 本版只声明了 --primary/--secondary/--tertiary/--content/--border 等，
@@ -251,7 +279,7 @@
     transition: gap .42s ease, margin-bottom .42s ease,
                 padding-bottom .42s ease, max-width .42s ease;
   }
-  .ed-single .ed-entries #menu {
+  .ed-single .ed-entries #ed-menu {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -264,14 +292,14 @@
     min-width: 0;
     transition: gap .42s ease;
   }
-  .ed-single .ed-entries #menu li {
+  .ed-single .ed-entries #ed-menu li {
     margin: 0;
     flex: 0 0 auto;
     /* 每项宽度：max-content（并排）⇄ 100%（独占一行 → 竖排） */
     width: auto;
     transition: width .42s ease;
   }
-  .ed-single .ed-entries #menu a {
+  .ed-single .ed-entries #ed-menu a {
     display: inline-block;
     font-size: .88rem;
     line-height: 1.4;
@@ -281,8 +309,8 @@
     transition: color .18s ease;
     white-space: nowrap;
   }
-  .ed-single .ed-entries #menu a:hover { color: var(--accent); }
-  .ed-single .ed-entries #menu .active { color: var(--accent); font-weight: 600; }
+  .ed-single .ed-entries #ed-menu a:hover { color: var(--accent); }
+  .ed-single .ed-entries #ed-menu .active { color: var(--accent); font-weight: 600; }
 
   /* ---------- header：夸张 ⇄ 简洁 ---------- */
   /* 面包屑已从文章页移除（见 layouts/partials/post_header.html），
@@ -350,10 +378,10 @@
     padding-bottom: 8px;
     max-width: none;
   }
-  .ed-single .ed-shell.is-pinned .ed-entries #menu {
+  .ed-single .ed-shell.is-pinned .ed-entries #ed-menu {
     gap: 8px 13px;
   }
-  .ed-single .ed-shell.is-pinned .ed-entries #menu a {
+  .ed-single .ed-shell.is-pinned .ed-entries #ed-menu a {
     font-size: .8rem;
   }
   /* header：收敛为简洁小标题；副标题收起 */
@@ -426,8 +454,8 @@
     .ed-single .ed-float,
     .ed-single .ed-float::before,
     .ed-single .ed-entries,
-    .ed-single .ed-entries #menu,
-    .ed-single .ed-entries #menu li,
+    .ed-single .ed-entries #ed-menu,
+    .ed-single .ed-entries #ed-menu li,
     .ed-single .ed-float-header .post-title,
     .ed-single .ed-float-header .post-description,
     .ed-single .ed-float-header .post-meta,
@@ -471,20 +499,26 @@
   flex: 0 0 auto;
 }
 .ed-single .ed-theme-toggle:hover { color: var(--accent); }
-.ed-single .ed-theme-toggle .ed-icon {
-  display: block;
-  /* 图标与中文方块字对齐。
-     文字盒高 19.7px（.88rem × line-height 1.4），图标 18px，
-     align-items:center 后图标几何中心比文字盒中心高约 1.5px；
-     中文方块字的视觉重心又略低于盒中心，故整体再下移 1px
-     让图标描边中心落在文字的视觉中线上。 */
-  width: 18px;
-  height: 18px;
+.ed-theme-toggle .ed-icon {   /* 不限定 .ed-single：首页刊头与文章页共用同一尺寸 */
+  /* 这里只管尺寸与微位移，**不要**写 display：
+     .ed-theme-toggle .ed-icon 的特异性(0,2,0)高于 .ed-icon-sun{display:none}(0,1,0)，
+     一旦在这里声明 display，太阳图标会永远显示 —— 明暗两种模式下都出现两个图标。
+     显隐统一交给下面成对的 .ed-icon-moon / .ed-icon-sun 规则。 */
+  width: 20px;
+  height: 20px;
+  /* 图标与中文方块字对齐：图标几何中心比文字盒中心略高，
+     中文方块字视觉重心又低于盒中心，故整体下移 1px 让描边中心对齐中线。 */
   transform: translateY(1px);
 }
-.ed-single .ed-theme-toggle .ed-icon-sun { display: none; }
-body.dark .ed-single .ed-theme-toggle .ed-icon-moon { display: none; }
-body.dark .ed-single .ed-theme-toggle .ed-icon-sun { display: block; }
+/* 图标显隐（全局规则，首页报头 / 文章页悬浮入口共用同一套图标）：
+   浅色显示月亮（点击→变暗），深色显示太阳（点击→变亮）。 */
+/* 主题切换图标显隐：浅色 → 月亮（点击变暗）；深色 → 太阳（点击变亮）。
+   两条基础规则的特异性相同(0,1,0)，靠书写顺序保证"后者不覆盖前者"，
+   因为各自互不重叠（月亮只被 body.dark 隐藏，太阳只被自己隐藏）。 */
+.ed-icon-moon { display: block; }
+.ed-icon-sun { display: none; }
+body.dark .ed-icon-moon { display: none; }
+body.dark .ed-icon-sun { display: block; }
 
 /* ============================================================
    右栏目录（TOC）
@@ -538,15 +572,17 @@ body.dark .ed-single .ed-theme-toggle .ed-icon-sun { display: block; }
 /* 末项去掉底部内边距：目录独立滚动时，这 5px 会白白占掉可视高度，
    使最后一项永远差一点点才算"完整可见"。 */
 .ed-single .ed-rail .toc .toc-list li:last-child > a { padding-bottom: 1px; }
-.ed-single .ed-rail .toc .toc-l2 > a { padding-left: 30px; }
-.ed-single .ed-rail .toc .toc-l3 > a { padding-left: 44px; font-size: .8rem; }
-.ed-single .ed-rail .toc .toc-l1 > a {
+/* 层级映射：正文已不用 h1（文章标题是页面唯一 h1），目录第一层从
+   toc-l2（h2，阶段级）开始，toc-l3（h3，章节）为第二层，共两级。 */
+.ed-single .ed-rail .toc .toc-l2 > a {
   color: var(--primary);
   font-weight: 600;
   font-size: .88rem;
   margin-top: 4px;
+  padding-left: 16px;
 }
-.ed-single .ed-rail .toc .toc-l1:first-child > a { margin-top: 0; }
+.ed-single .ed-rail .toc .toc-l2:first-child > a { margin-top: 0; }
+.ed-single .ed-rail .toc .toc-l3 > a { padding-left: 30px; font-size: .8rem; }
 
 @media (max-width: 1079.98px) {
   .ed-single .ed-rail .toc { border-left: none; padding-left: 0; }
@@ -556,6 +592,106 @@ body.dark .ed-single .ed-theme-toggle .ed-icon-sun { display: block; }
     border-left: none;
   }
 }
+
+/* ============================================================
+   竖屏（<1080px）：目录改为悬浮抽屉
+   ------------------------------------------------------------
+   基础规则（无 JS / 未激活）下，目录仍是上方处理过的内联块。
+   仅当 .ed-shell 带 .ed-toc-floating（JS 在竖屏且有目录时添加），
+   才把 .ed-rail 变成右侧滑入的固定抽屉，并显示悬浮按钮 + 遮罩。
+   浮层控件默认隐藏，确保桌面端绝不会出现。
+   ============================================================ */
+.ed-toc-fab,
+.ed-toc-backdrop { display: none; }
+
+@media (max-width: 1079.98px) {
+  /* 悬浮按钮：与「回到顶部」同款 —— 42px 正圆、无文字、右对齐、垂直错开 */
+  .ed-shell.ed-toc-floating .ed-toc-fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    right: 30px;
+    bottom: 114px;            /* 回到顶部(bottom:60) 上方，错开 12px 间距 */
+    z-index: 99;
+    width: 42px;
+    height: 42px;
+    padding: 12px;
+    border: none;
+    border-radius: 64px;
+    background: var(--tertiary);
+    color: var(--secondary);
+    cursor: pointer;
+    transition: color .18s ease, opacity .2s ease, visibility .2s ease;
+  }
+  .ed-shell.ed-toc-floating .ed-toc-fab:hover { color: var(--primary); }
+  .ed-shell.ed-toc-floating .ed-toc-fab-icon { width: 18px; height: 18px; }
+
+  /* 遮罩 */
+  .ed-shell.ed-toc-floating .ed-toc-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 800;
+    background: rgba(15, 17, 21, .42);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .26s ease, visibility .26s ease;
+  }
+  .ed-shell.ed-toc-floating.toc-open .ed-toc-backdrop {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* 抽屉本体：复用 .ed-rail，右滑入场 */
+  .ed-shell.ed-toc-floating .ed-rail {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: min(84vw, 340px);
+    max-width: none;
+    margin: 0;
+    background: var(--theme);
+    border-left: 1px solid var(--border);
+    box-shadow: -12px 0 40px rgba(0, 0, 0, .18);
+    transform: translateX(100%);
+    transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+    z-index: 820;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: calc(var(--ed-top, 16px) + 8px) 22px 28px;
+  }
+  .ed-shell.ed-toc-floating.toc-open .ed-rail { transform: translateX(0); }
+
+  /* 抽屉内目录：去掉竖线，标题下加分隔 */
+  .ed-shell.ed-toc-floating .ed-rail .toc { border-left: none; padding-left: 0; }
+  .ed-shell.ed-toc-floating .ed-rail .toc .toc-head {
+    font-size: .8rem;
+    margin: 0 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ed-shell.ed-toc-floating .ed-rail .toc .toc-list a {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    font-size: .92rem;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+  .ed-shell.ed-toc-floating .ed-rail .toc .toc-l3 > a { padding-left: 18px; }
+
+  /* 抽屉打开时隐藏悬浮按钮（关闭由遮罩 / 链接 / Esc 负责） */
+  .ed-shell.ed-toc-floating.toc-open .ed-toc-fab {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* 抽屉打开时锁定页面滚动 */
+body.ed-toc-lock { overflow: hidden; }
 
 @media (min-width: 1080px) {
   /* 正文区各块锁回舒适行宽。
@@ -571,25 +707,26 @@ body.dark .ed-single .ed-theme-toggle .ed-icon-sun { display: block; }
 
 .ed-single .post-content h2,
 .ed-single .post-content h3,
-.ed-single .post-content h4 {
+.ed-single .post-content h4,
+.ed-single .post-content h5 {
   scroll-margin-top: 88px;
 }
 /* ============================================================
    宽屏骨架：列表页 / 首页（容器放宽 + 索引双列）
    ============================================================ */
-/* 页头与正文区在宽屏对齐到统一容器 */
+/* 内容区在宽屏对齐到统一容器 */
 @media (min-width: 1080px) {
-  .ed-page-header { max-width: var(--ed-container); }
+  /* 宽屏把左右内边距放到与文章页同一档（--ed-gutter），
+     否则首页/列表页 20px、文章页 40px，左右基线对不上。 */
   .ed-list-wrap,
-  .ed-front { max-width: var(--ed-container); }
+  .ed-front {
+    max-width: var(--ed-container);
+    padding-left: var(--ed-gutter);
+    padding-right: var(--ed-gutter);
+  }
 
-
-  /* 列表页正文（_index.md 正文 / 页头说明）锁死舒适行宽，不随容器拉宽 */
-  .list .post-content,
-  .ed-page-header .post-description { max-width: var(--ed-measure); }
-
-  /* 卡片流宽屏：序号列稍宽、卡片内边距更舒展 */
-  .ed-li-link { grid-template-columns: 3.8rem minmax(0, 1fr); column-gap: 28px; padding: 30px 0; }
+  /* 列表页正文（_index.md 正文）锁死舒适行宽，不随容器拉宽 */
+  .list .post-content { max-width: var(--ed-measure); }
 }
 
 /* ---------- 顶栏刊名（running head） ---------- */
@@ -600,24 +737,27 @@ body.dark .ed-single .ed-theme-toggle .ed-icon-sun { display: block; }
   letter-spacing: .01em;
 }
 
-/* ---------- 社交图标 ---------- */
+/* ---------- 社交图标（左列刊头底部） ----------
+   刻意不做圆形描边：圆圈是社交媒体的语汇，与编辑风的刊物感冲突。
+   纯图标 + hover 变强调色，和主题切换按钮共用一套节奏。 */
 .ed-social {
   display: flex;
-  gap: 14px;
+  gap: var(--ed-space-md);
 }
 .ed-social a {
-  width: 38px; height: 38px;
-  display: grid; place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
   color: var(--secondary-text);
-  transition: color .18s ease, border-color .18s ease, transform .18s ease;
+  transition: color .18s ease, transform .18s ease;
 }
+.ed-social a svg { width: 20px; height: 20px; }
 .ed-social a:hover {
   color: var(--accent);
-  border-color: var(--accent);
   transform: translateY(-2px);
 }
+
 
 /* ---------- 内容容器 ---------- */
 /* 基础只声明内边距与居中；max-width 仅在窄屏生效，
@@ -625,147 +765,328 @@ body.dark .ed-single .ed-theme-toggle .ed-icon-sun { display: block; }
 .ed-front,
 .ed-list-wrap {
   margin: 0 auto;
-  padding: 40px 20px 80px;
+  padding: var(--ed-page-top) var(--ed-page-pad-x) var(--ed-page-bottom);
 }
-/* 列表页：卡片流紧跟页头，去掉多余的顶部内边距，
-   并把左右内边距对齐页头（否则卡片比标题更靠内，产生错位） */
-.ed-list-wrap {
-  padding-top: 8px;
+/* 首页顶部收窄：导航条在最上面，它自带 padding，容器再给 40px 会显得
+   上方空一大块，而下方内容又挤 —— 上下比例反过来。 */
+.ed-front { padding-top: var(--ed-space-sm); }
+/* 列表页容器：与栏目头的间距由 .ed-head + * 统一给，这里不再自带 padding。
+   （单页导航把整页内容注入右列时，.ed-body 内会再清零一次左右内边距，
+   避免与 .ed-front 的内边距叠加成双份缩进。） */
+.ed-list-wrap { padding-top: 0; }
+.ed-body .ed-list-wrap,
+.ed-body .ed-front,
+.ed-body .ed-page {
+  margin: 0;
+  padding: 0;
+  max-width: none;
 }
 @media (max-width: 1079.98px) {
   .ed-front,
-  .ed-list-wrap,
-  .ed-page-header { max-width: 760px; }
+  .ed-list-wrap { max-width: 760px; }
 }
 
-/* ---------- 列表页：文章卡片流 ---------- */
-/* 命名用 ed-li-* 前缀（list），与首页的 .ed-card 体系完全隔离 ——
-   首页的卡片是「绝对定位覆盖式链接 + .ed-card-body」，
-   列表页是「grid 序号列 + 顺序内容」，两者结构不同，不能共用类名。
-   每篇文章 = 一张卡片：序号 / 标题 / 摘要 / 元信息，
-   纵向堆叠，1px 分隔线切分；hover 时序号与标题转强调色、整块右移。
-   选卡片流而非「主打 + 索引」的原因见 layouts/_default/list.html 顶部注释。 */
-.ed-li-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--border);
-}
-.ed-li-item {
-  border-bottom: 1px solid var(--border);
-}
-.ed-li-link {
+/* ---------- 杂志式卡片流（首页 + /posts/ + 归档 共用同一套） ----------
+   每篇文章 = 一张卡片：巨号描边序号 / 衬线标题 / 摘要 / 元信息，
+   由 1px 发丝线切分；hover 时序号与标题转强调色、整块右移。
+   整卡可点：用绝对定位的覆盖式链接（.ed-card-link），标题保持语义标题。 */
+.ed-cards { display: block; }
+
+.ed-card {
+  position: relative;
   display: grid;
-  /* 左序号列 + 右内容列；序号列定宽，内容列吃满 */
-  grid-template-columns: 3.2rem minmax(0, 1fr);
-  column-gap: 22px;
-  padding: 26px 0;
-  transition: transform .2s ease;
+  /* 序号列定宽（不是 auto）：首页"01"、归档"01-02"宽度不同，
+     用 auto 会让标题左边缘在几页之间对不齐。 */
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  column-gap: var(--ed-space-md);
+  padding: var(--ed-space-xl) 0;
+  border-bottom: 1px solid var(--border);
+  transition: padding-left .22s ease, border-color .22s ease;
 }
-.ed-li-link:hover { transform: translateX(6px); }
-
-/* 内容列：标题 / 摘要 / 元信息在右列内部纵向堆叠。
-   必须用一层容器包住 —— 否则 grid 会把每个子元素依次放进新单元格，
-   摘要会被挤成一条窄竖条（踩过）。 */
-.ed-li-body { min-width: 0; }
-
-/* 序号：等宽数字，视觉上像期刊页码 */
-.ed-li-num {
+/* 首张卡片不加顶线：栏目头已有 1px 线，再压一条会成双线 */
+.ed-card:hover { padding-left: var(--ed-space-xs); border-color: var(--accent); }
+.ed-card-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+/* 巨号衬线序号：描边字。--tertiary 在浅色下近乎不可见，
+   改用 --secondary-text 的 55% 透明，保证在明暗两种底色上都"隐约可见但不抢戏"。 */
+.ed-card-num {
   font-family: var(--ed-serif);
-  font-size: 1.15rem;
+  font-size: 2.4rem;
   font-weight: 700;
-  line-height: 1.5;
-  color: var(--tertiary);
+  line-height: .82;
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--secondary-text) 42%, transparent);
+  letter-spacing: -.02em;
   font-variant-numeric: tabular-nums;
-  transition: color .2s ease;
+  transition: -webkit-text-stroke-color .22s ease, color .22s ease;
+  align-self: start;
+  /* 序号顶端与标题首行对齐：标题行高 1.26 × 1.46rem ≈ 29px，
+     序号行盒 0.82 × 2.4rem ≈ 31px，微调 2px 让两者视觉顶端齐平。 */
+  padding-top: 2px;
 }
-.ed-li-link:hover .ed-li-num { color: var(--accent); }
+/* 不支持描边时退回淡色实心，避免序号整块"隐形" */
+@supports not (-webkit-text-stroke: 1px red) {
+  .ed-card-num { color: var(--tertiary); }
+}
+.ed-card:hover .ed-card-num { -webkit-text-stroke-color: var(--accent); }
+/* 归档页的序号位放日期（01-02），字号比纯数字序号小一档 */
+.ed-card-num--date { font-size: 1.15rem; padding-top: 5px; }
 
-.ed-li-title {
+/* 卡片正文限宽：右列在宽屏下接近 1200px，不限宽的话标题/摘要会拉成长行。
+   分隔线（.ed-card 的 border-bottom）仍铺满整列 —— 杂志式的做法是
+   线满栏、字限宽。 */
+.ed-card-body { min-width: 0; max-width: var(--ed-measure-max); }
+.ed-card-title {
   font-family: var(--ed-serif);
-  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+  font-size: 1.46rem;
   font-weight: 700;
-  line-height: 1.32;
-  letter-spacing: -.005em;
-  margin: 0 0 8px;
+  line-height: 1.26;
+  margin: 0 0 var(--ed-space-xs);
   color: var(--primary);
-  transition: color .2s ease;
+  transition: color .22s ease;
 }
-.ed-li-link:hover .ed-li-title { color: var(--accent); }
-
-.ed-li-desc {
-  font-size: .95rem;
+.ed-card:hover .ed-card-title { color: var(--accent); }
+.ed-card-desc {
+  font-size: .96rem;
   line-height: 1.7;
   color: var(--secondary-text);
-  margin: 0 0 12px;
-  /* 摘要最多 3 行，超出省略，保证卡片高度可控 */
+  margin: 0 0 var(--ed-space-sm);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.ed-card-meta {
+  font-size: .8rem;
+  line-height: 1.5;
+  color: var(--secondary-text);
+}
+/* 卡片内的链接（如 meta 里的标签）要浮在覆盖层之上才能点 */
+.ed-card-meta a { position: relative; z-index: 2; }
 
-.ed-li-meta {
+/* "查看全部文章 →"：卡片流之后的下一步入口 */
+.ed-all {
+  display: inline-block;
+  margin-top: var(--ed-space-lg);
+  font-size: .9rem;
+  color: var(--secondary-text);
+  border-bottom: none;
+  transition: color .18s ease;
+}
+.ed-all:hover { color: var(--accent); }
+
+/* 列表分页：与上方卡片流拉开统一间距，两端对齐 */
+.ed-list-footer { margin-top: var(--ed-space-lg); }
+.ed-list-footer .pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ed-space-md);
+}
+
+/* ---------- 搜索页（layouts/_default/search.html，自建零依赖版） ---------- */
+.ed-search { margin: 0; }
+.ed-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--ed-sans);
+  font-size: 1rem;
+  color: var(--primary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--primary);
+  padding: 10px 2px;
+  outline: none;
+  transition: border-color .18s ease;
+}
+.ed-search-input:focus { border-bottom-color: var(--accent); }
+.ed-search-input::placeholder { color: var(--tertiary); }
+.ed-search-status {
+  font-size: .8rem;
+  color: var(--secondary-text);
+  margin: var(--ed-space-sm) 0 0;
+  min-height: 1.2em;
+}
+.ed-search-results {
+  list-style: none;
+  margin: var(--ed-space-lg) 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.ed-search-item { border-bottom: 1px solid var(--border); }
+.ed-search-link {
+  display: block;
+  padding: var(--ed-space-md) 0;
+  border-bottom: none;
+  transition: padding-left .2s ease;
+}
+.ed-search-link:hover { padding-left: var(--ed-space-xs); }
+.ed-search-title {
+  display: block;
+  font-family: var(--ed-serif);
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: var(--primary);
+  transition: color .2s ease;
+}
+.ed-search-link:hover .ed-search-title { color: var(--accent); }
+.ed-search-desc {
+  display: block;
+  margin-top: var(--ed-space-2xs);
+  font-size: .84rem;
+  line-height: 1.65;
+  color: var(--secondary-text);
+}
+/* 命中高亮：用强调色做底，避免与链接色混淆 */
+.ed-search-results mark {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+}
+@media (max-width: 767.98px) {
+  .ed-search-title { font-size: 1rem; }
+}
+
+/* ---------- 标签/分类总览（layouts/_default/terms.html） ---------- */
+.ed-terms {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ed-term { border-bottom: 1px solid var(--border); }
+.ed-term-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ed-space-md);
+  padding: var(--ed-space-md) 0;
+  border-bottom: none;
+  transition: padding-left .2s ease;
+}
+.ed-term-link:hover { padding-left: var(--ed-space-xs); }
+.ed-term-name {
+  font-family: var(--ed-serif);
+  /* 字号向卡片标题（1.46rem）靠拢，标签页与文章列表观感一致 */
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  transition: color .2s ease;
+}
+.ed-term-link:hover .ed-term-name { color: var(--accent); }
+.ed-term-count {
   font-size: .82rem;
   color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
-.ed-li-dot { color: var(--tertiary); }
 
-/* 页头篇数统计 */
-.ed-page-count {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-top: 14px;
-  color: var(--secondary-text);
-}
-.ed-page-count-num {
-  font-family: var(--ed-serif);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--primary);
-  font-variant-numeric: tabular-nums;
-}
-.ed-page-count-label { font-size: .85rem; letter-spacing: .05em; }
+/* 旧的大号篇数统计（.ed-page-count*）已删除，计数统一在栏目头右侧
+   （.ed-grid-count，见 partials/page_head.html）。 */
 
 
 /* ---------- 首页：双态响应式（窄屏全幅报头 / 宽屏左刊名竖栏） ---------- */
 /* 注意：不要在此声明 .ed-front 的 display，
    否则会覆盖上面 @media 块里的 grid（同特异性、后者优先）。 */
 
-/* 报头：窄屏 = 顶部整幅（方向 1）；宽屏由 grid 移入左栏（方向 2） */
+/* 报头：窄屏 = 顶部整幅；宽屏 = 左列常驻刊头 */
 .ed-masthead {
   position: relative;   /* 供主题切换按钮绝对定位到角落 */
   text-align: center;
   padding: 8px 0 28px;
-  border-bottom: 2px solid var(--primary);
+  border-bottom: 1px solid var(--border);
   margin-bottom: 8px;
 }
 .ed-masthead-title {
   font-family: var(--ed-serif);
-  font-size: clamp(2.2rem, 9vw, 3.4rem);
+  font-size: clamp(1.9rem, 7.5vw, 2.8rem);
   font-weight: 700;
   line-height: 1.08;
   letter-spacing: -.01em;
   color: var(--primary);
 }
 .ed-masthead-dek {
-  margin: 12px auto 0;
+  margin: var(--ed-space-sm) auto 0;
   max-width: 30rem;
   font-size: .98rem;
   line-height: 1.7;
+  letter-spacing: .02em;   /* 拉开一点字距，副标题读起来像标语而非正文 */
   color: var(--secondary-text);
 }
+/* 报头第二行自我介绍（params.profile.desc）：比 dek 更长的一段话，
+   窄屏居中限宽，宽屏在左栏左对齐（见下方宽屏块）。 */
+.ed-masthead-desc {
+  margin: var(--ed-space-sm) auto 0;
+  max-width: 26rem;
+  font-size: .88rem;
+  line-height: 1.75;
+  color: var(--secondary-text);
+}
+
+/* ---------- 项目区块（右列第三行；数据源 data/projects.toml） ---------- */
+.ed-projects {
+  margin-top: var(--ed-space-xl);
+  padding-top: var(--ed-space-lg);
+  border-top: 1px solid var(--border);
+}
+.ed-projects-head {
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+  margin-bottom: var(--ed-space-md);
+  user-select: none;
+}
+/* 窄屏单列；宽屏两列（见下方媒体查询） */
+.ed-projects-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ed-space-2xs) var(--ed-space-xl);
+}
+.ed-project {
+  display: block;
+  padding: var(--ed-space-sm) 0;
+  border-bottom: none;
+}
+.ed-project-name {
+  display: block;
+  font-family: var(--ed-serif);
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--primary);
+  transition: color .18s ease;
+}
+.ed-project-desc {
+  display: block;
+  margin-top: var(--ed-space-2xs);
+  font-size: .82rem;
+  line-height: 1.65;
+  color: var(--secondary-text);
+}
+.ed-project:hover .ed-project-name { color: var(--accent); }
+.ed-projects-more {
+  display: inline-block;
+  margin-top: var(--ed-space-sm);
+  font-size: .82rem;
+  color: var(--secondary-text);
+  border-bottom: none;
+  transition: color .18s ease;
+}
+.ed-projects-more:hover { color: var(--accent); }
 .ed-masthead-foot {
   margin-top: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
+}
+/* 社交图标与主题切换同一行（窄屏居中、宽屏随左栏左对齐） */
+.ed-masthead-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 .ed-masthead-issue {
   font-size: .74rem;
@@ -775,55 +1096,66 @@ body.dark .ed-single .ed-theme-toggle .ed-icon-sun { display: block; }
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- 首页报头内的导航（替代顶栏） ---------- */
-/* 首页隐藏主题顶栏：导航已并入报头，避免站名重复 */
+/* ---------- 导航行（右列第一行；窄屏位于报头之下） ---------- */
+/* 首页隐藏主题顶栏：导航已在正文行内，避免站名重复 */
 body.home .header { display: none; }
 /* 顶栏隐藏后，正文不再让出顶栏高度 */
 body.home .main { padding-top: 28px; }
 
-/* 导航容器（窄屏：横向居中排；宽屏在下方媒体查询里改竖排左对齐） */
-.ed-masthead-nav {
-  margin-top: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px 22px;
+/* 导航行。窄屏：整页最上方，横向居中，底部发丝线与报头分隔；
+   宽屏：右列第 1 行，与左列 header 顶边齐平、左对齐（宽屏规则在下方）。
+   两种宽度都吸顶（sticky top: 0）—— 它是"框架"，滚动时要一直在。
+   吸顶后正文会从它下面穿过，所以必须有不透明背景。
+   注意：不通栏。通栏会占掉左列顶部、把要固定的 header 挤下去。 */
+.ed-front-nav {
+  margin: 0 0 var(--ed-space-lg);
+  padding: var(--ed-space-xs) 0 var(--ed-space-md);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--theme);
 }
 
 /* 报头内导航。
-   注意：主题对 #menu 有 `margin:auto var(--gap)` 与 `li+li{margin-inline-start}`，
-   ID 特异性会压过 .ed-menu，故此处用 #menu 提权重置，避免导航相对站名缩进。 */
-.ed-masthead-nav #menu,
-.ed-masthead-nav .ed-menu {
+   注意：主题 header.css 里有 `#menu { margin:auto var(--gap) }` 与
+   `#menu li + li { margin-inline-start: var(--gap) }`。本 partial 的菜单
+   id 是 ed-menu（避免与顶栏 #menu 撞 id），但仍属 ID 级特异性，
+   足以压过主题规则、把导航拉回与刊名同一条左基线。 */
+.ed-front-nav #ed-menu,
+.ed-front-nav .ed-menu {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 22px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ed-space-xs) var(--ed-space-lg);
 }
-.ed-masthead-nav #menu li,
-.ed-masthead-nav .ed-menu li { margin: 0; padding: 0; }
-.ed-masthead-nav #menu a,
-.ed-masthead-nav .ed-menu a {
+.ed-front-nav #ed-menu li,
+.ed-front-nav .ed-menu li { margin: 0; padding: 0; }
+.ed-front-nav #ed-menu a,
+.ed-front-nav .ed-menu a {
   color: var(--secondary-text);
   font-size: .9rem;
   font-weight: 500;
   border-bottom: none;
   transition: color .18s ease;
 }
-.ed-masthead-nav #menu a:hover,
-.ed-masthead-nav #menu .active,
-.ed-masthead-nav #menu a .active,
-.ed-masthead-nav .ed-menu a:hover,
-.ed-masthead-nav .ed-menu .active { color: var(--accent); }
+.ed-front-nav #ed-menu a:hover,
+.ed-front-nav #ed-menu .active,
+.ed-front-nav #ed-menu a .active,
+.ed-front-nav .ed-menu a:hover,
+.ed-front-nav .ed-menu .active { color: var(--accent); }
 /* 首页报头导航不含顶栏的 active 下划线（改由颜色表达） */
-.ed-masthead-nav #menu .active { border-bottom: none; font-weight: 500; }
-/* 主题切换按钮：默认与导航同排（窄屏） */
-.ed-masthead-nav #theme-toggle {
+.ed-front-nav #ed-menu .active { border-bottom: none; font-weight: 500; }
+/* 主题切换按钮：与社交图标同一行（左列底部） */
+.ed-masthead-links .ed-theme-toggle {
   padding: 0;
   margin: 0;
+  line-height: 1;
+  font-size: 1rem;
   color: var(--secondary-text);
   background: transparent;
   border: none;
@@ -832,105 +1164,85 @@ body.home .main { padding-top: 28px; }
   align-items: center;
   transition: color .18s ease;
 }
-.ed-masthead-nav #theme-toggle:hover { color: var(--accent); }
+.ed-masthead-links .ed-theme-toggle:hover { color: var(--accent); }
+/* 顶栏 button#theme-toggle 带 font-size:26px，会连带放大这个按钮里的图标盒
+   （svg 固定 18px，但行盒会被撑高），上面已显式压回 1rem。 */
 
+/* 栏目头（partials/page_head.html）：左大号衬线栏目名、右计数，下压 1px 发丝线。
+   首页 / 文章 / 标签 / 归档 / 关于 / 搜索全部走这一个组件。
+   栏目名与左列刊名同族（衬线），形成"刊名 / 栏目"的呼应。
+   分隔只用 1px 发丝线（与卡片之间的线同一颜色/粗细），
+   层级一律靠字号与留白表达 —— 之前那条 3px 粗线在每页顶部横一道，
+   比正文任何东西都重，也是"丑"的主要来源。 */
+.ed-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ed-space-md);
+  padding-bottom: var(--ed-space-md);
+  border-bottom: 1px solid var(--border);
+}
+.ed-head-title {
+  font-family: var(--ed-serif);
+  font-size: clamp(1.6rem, 3.2vw, 2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+  margin: 0;
+  color: var(--primary);
+}
+.ed-head-count {
+  font-size: .8rem;
+  color: var(--secondary-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* 栏目头 → 紧随其后的内容块：统一留白（不论后面是卡片流、标签表、
+   搜索框、正文还是归档分节，间距都相同）。
+   有说明行时分两段：头 → 说明（12px，见 .ed-head-desc）、说明 → 内容（24px）。 */
+.ed-head + *:not(.ed-head-desc),
+.ed-head-desc + * { margin-top: var(--ed-space-lg); }
+
+/* 归档页的年份小节头：与栏目头同为"标题 + 1px 线"，用小字号区分层级 */
+.ed-kicker {
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  color: var(--primary);
+}
 .ed-grid-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 14px;
-  border-bottom: 3px solid var(--primary);
-  margin-bottom: 4px;
+  gap: var(--ed-space-md);
+  padding-bottom: var(--ed-space-sm);
+  border-bottom: 1px solid var(--border);
 }
 .ed-grid-count {
-  font-size: .82rem;
+  font-size: .8rem;
   color: var(--secondary-text);
   font-variant-numeric: tabular-nums;
 }
-.ed-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
-}
-
-/* 卡片：序号作为超大装饰元素，标题与之并排形成编辑式节奏 */
-.ed-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 18px;
-  padding: 26px 0 24px;
-  border-bottom: 1px solid var(--border);
-  transition: padding-left .22s ease, border-color .22s ease;
-}
-.ed-card:hover { padding-left: 10px; border-color: var(--accent); }
-.ed-card-link {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-}
-/* 巨号衬线序号：描边字。--tertiary 在浅色下近乎不可见，
-   改用 --secondary-text 的 45% 透明，保证在明暗两种底色上都"隐约可见但不抢戏"。 */
-.ed-card-num {
-  font-family: var(--ed-serif);
-  font-size: 2.4rem;
-  font-weight: 700;
-  line-height: .82;
-  color: transparent;
-  -webkit-text-stroke: 1px color-mix(in srgb, var(--secondary-text) 55%, transparent);
-  letter-spacing: -.02em;
-  transition: -webkit-text-stroke-color .22s ease, color .22s ease;
-  align-self: start;
-  padding-top: 4px;
-}
-.ed-card:hover .ed-card-num {
-  -webkit-text-stroke-color: var(--accent);
-}
-.ed-card-body { min-width: 0; }
-.ed-card-title {
-  font-family: var(--ed-serif);
-  font-size: 1.46rem;
-  font-weight: 700;
-  line-height: 1.26;
-  margin: 0 0 10px;
-  color: var(--primary);
-  transition: color .22s ease;
-}
-.ed-card:hover .ed-card-title { color: var(--accent); }
-.ed-card-desc {
-  font-size: .98rem;
+/* 栏目头右侧的链接形态（如"查看全部 →"） */
+.ed-head-link { border-bottom: none; transition: color .18s ease; }
+.ed-head-link:hover { color: var(--accent); }
+/* 栏目说明：头下的一行小字，限宽与正文一致 */
+.ed-head-desc {
+  margin: var(--ed-space-sm) 0 0;
+  font-size: .92rem;
   line-height: 1.7;
   color: var(--secondary-text);
-  margin: 0 0 14px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  max-width: var(--ed-measure);
 }
-.ed-card-meta {
-  font-size: .8rem;
-  color: var(--secondary-text);
-}
-.ed-card-meta a { position: relative; z-index: 2; }
 
-/* ---------- 列表页页头 ---------- */
-/* max-width 交由窄屏/宽屏断点分别处理，避免被基础规则固定成 760px */
-.ed-page-header {
-  margin: 0 auto;
-  padding: 40px 20px 8px;
-}
-.ed-page-title {
-  font-family: var(--ed-serif);
-  font-size: clamp(2rem, 5vw, 2.8rem);
-  font-weight: 700;
-  margin: 0 0 8px;
-  color: var(--primary);
-}
-.ed-page-desc {
-  color: var(--secondary-text);
-  margin-bottom: 8px;
-}
+/* 归档页：按年份分节，年份用小字 kicker 做小节头（与栏目名形成两级层次）。
+   第一个分节与栏目头的间距由 .ed-head + * 统一给；分节之间用 xl。 */
+.ed-arc-year + .ed-arc-year { margin-top: var(--ed-space-xl); }
+.ed-arc-head { padding-bottom: var(--ed-space-sm); }
+
+/* 杂志式卡片流（.ed-card*）是首页 / /posts/ / 归档 共用的当前版式；
+   栏目头统一走 partials/page_head.html（.ed-head），归档的年份小节用
+   .ed-grid-head + .ed-kicker。旧的 .ed-li-* 行列表方案已弃用，其 CSS 已删。 */
 
 /* ---------- 文章页编辑风 ---------- */
 .ed-single .post-title {
@@ -1065,11 +1377,13 @@ body.home .main { padding-top: 28px; }
 .ed-single .post-content blockquote p:first-child { margin-top: 0; }
 .ed-single .post-content blockquote p:last-child { margin-bottom: 0; }
 
-/* 标题：h2/h3 也用无衬线。
-   中文标题用 Playfair 等西文衬线会「中文落回宋体、西文用衬线」，风格割裂且细笔画发虚。 */
+/* 标题：正文各级标题均用无衬线。
+   中文标题用 Playfair 等西文衬线会「中文落回宋体、西文用衬线」，风格割裂且细笔画发虚。
+   层级语义（正文不再使用 h1）：h2 = 阶段（带分隔线），h3 = 章，h4 = 节，h5 = 子节。 */
 .ed-single .post-content h2,
 .ed-single .post-content h3,
-.ed-single .post-content h4 {
+.ed-single .post-content h4,
+.ed-single .post-content h5 {
   font-family: var(--ed-sans);
   font-weight: 700;
   line-height: 1.45;
@@ -1089,10 +1403,15 @@ body.home .main { padding-top: 28px; }
   font-size: 1rem;
   margin: 1.4em 0 .5em;
 }
+.ed-single .post-content h5 {
+  font-size: .95rem;
+  margin: 1.2em 0 .45em;
+}
 /* 标题后紧跟的段落去掉多余上边距 */
 .ed-single .post-content h2 + p,
 .ed-single .post-content h3 + p,
-.ed-single .post-content h4 + p { margin-top: .2em; }
+.ed-single .post-content h4 + p,
+.ed-single .post-content h5 + p { margin-top: .2em; }
 
 /* 锚点：默认隐藏（主题已 hidden），悬停标题时在右侧淡出，方便复制链接 */
 .ed-single .post-content .anchor {
@@ -1104,7 +1423,8 @@ body.home .main { padding-top: 28px; }
 }
 .ed-single .post-content h2:hover .anchor,
 .ed-single .post-content h3:hover .anchor,
-.ed-single .post-content h4:hover .anchor { color: var(--accent); }
+.ed-single .post-content h4:hover .anchor,
+.ed-single .post-content h5:hover .anchor { color: var(--accent); }
 
 /* ---------- 顶部菜单 ---------- */
 .header .menu a { font-size: .88rem; font-weight: 500; }
@@ -1112,15 +1432,59 @@ body.home .main { padding-top: 28px; }
 
 /* ---------- 窄屏 ---------- */
 @media (max-width: 768px) {
-  /* 卡片流：序号列收窄，卡片内边距压缩，避免小屏上文字挤成窄条 */
-  .ed-li-link { grid-template-columns: 2.4rem minmax(0, 1fr); column-gap: 14px; padding: 22px 0; }
-  .ed-li-num { font-size: 1rem; }
-  .ed-li-title { font-size: 1.18rem; }
   .ed-single .post-content { font-size: 1.06rem; line-height: 1.85; }
-  .ed-front,
-  .ed-list-wrap,
-  .ed-page-header { padding-left: 18px; padding-right: 18px; }
+  /* 窄屏左右内边距沿用 --ed-page-pad-x，不再单独写 18px */
 }
+
+/* ---------- 404 ---------- */
+.ed-404 {
+  margin: 0 auto;
+  padding: 48px 20px 96px;
+  max-width: 760px;
+}
+.ed-404-code {
+  font-family: var(--ed-serif);
+  font-size: clamp(4rem, 16vw, 7rem);
+  font-weight: 700;
+  line-height: .9;
+  letter-spacing: -.03em;
+  margin: 0 0 12px;
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--secondary-text) 55%, transparent);
+  /* 不支持 -webkit-text-stroke 时退回淡色实心，避免整块"隐形" */
+  -webkit-text-stroke-color: color-mix(in srgb, var(--secondary-text) 55%, transparent);
+}
+@supports not (-webkit-text-stroke: 1px red) {
+  .ed-404-code { color: var(--tertiary); }
+}
+.ed-404-title {
+  font-family: var(--ed-serif);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--primary);
+}
+.ed-404-desc {
+  font-size: .98rem;
+  line-height: 1.7;
+  color: var(--secondary-text);
+  margin: 0 0 28px;
+}
+.ed-404-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.ed-404-nav a {
+  font-size: .92rem;
+  font-weight: 500;
+  color: var(--secondary-text);
+  border-bottom: none;
+  transition: color .18s ease;
+}
+.ed-404-nav a:hover { color: var(--accent); }
 
 /* ---------- 打印 ---------- */
 @media print {
@@ -1145,17 +1509,28 @@ body.home .main { padding-top: 28px; }
     position: relative;
   }
 
-  /* 报头收进左栏：内部一律左对齐（覆盖窄屏居中） */
+  /* 报头收进左栏：内部一律左对齐（覆盖窄屏居中）。
+     同时固定（sticky）—— 它是"框架"，内容滚动时刊名/社交要一直在。
+     从页面最顶端开始（top 就是 --ed-top，不再给导航条让位：
+     导航在右列，不占左列空间）。
+     跨两行是为了拿到 sticky 的位移空间：只在第 1 行的话，活动范围
+     仅等于导航条那一行高度，滚一点就跟着走了。 */
   .ed-masthead {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 1 / span 2;
+    position: sticky;
+    top: var(--ed-top);
+    align-self: start;
+    /* 视口很矮时 header 自身可滚动，避免底部被裁掉 */
+    max-height: calc(100vh - var(--ed-top) - 24px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
     text-align: left;
     border-bottom: none;
     border-right: none;
-    padding: 0 40px 0 0;
+    padding: 0 var(--ed-gutter) 0 0;
     margin: 0;
-    position: static;
-    align-self: stretch;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -1173,90 +1548,112 @@ body.home .main { padding-top: 28px; }
   }
   /* 站名：竖栏里收小，与右栏栏目头顶边对齐 */
   .ed-masthead-title {
-    font-size: 1.68rem;
-    line-height: 1.28;
+    /* 与右列栏目名（1.6–2rem）成对：左列刊名略小一号即可，
+       太小会让整页像"没有主标题" */
+    font-size: 1.85rem;
+    line-height: 1.24;
     letter-spacing: -.01em;
     margin: 0;
     text-align: left;
     width: 100%;
   }
   .ed-masthead-dek {
-    margin: 14px 0 0;
-    font-size: .86rem;
-    line-height: 1.72;
+    margin: var(--ed-space-lg) 0 0;   /* 窄栏里 12px 太紧，两行会糊在一起 */
+    font-size: .88rem;
+    line-height: 1.7;
     max-width: none;
     text-align: left;
     width: 100%;
   }
-
-  /* 导航竖排于左栏，明确左对齐（覆盖窄屏居中 + 横向换行） */
-  .ed-masthead-nav {
-    margin-top: 30px;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    gap: 12px;
-    width: 100%;
-  }
-  .ed-masthead-nav .ed-menu,
-  .ed-masthead-nav #menu {
-    flex-direction: column;
-    align-items: flex-start;
-    flex-wrap: nowrap;
-    gap: 11px;
+  .ed-masthead-desc {
+    margin: var(--ed-space-md) 0 0;
+    max-width: none;
     text-align: left;
     width: 100%;
-    margin: 0;
-    overflow: visible;
   }
-  .ed-masthead-nav .ed-menu li,
-  .ed-masthead-nav #menu li {
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  /* 主题用了 li+li 左外边距，竖排时同样要清零，保证条目同一条左基线 */
-  .ed-masthead-nav #menu li + li { margin-inline-start: 0; }
-  .ed-masthead-nav .ed-menu a,
-  .ed-masthead-nav #menu a {
-    display: inline-block;
-    font-size: .9rem;
-    white-space: normal;
-  }
-  /* 主题切换移出绝对定位，作为普通项紧随导航 */
-  .ed-masthead-nav #theme-toggle {
-    position: static;
-    margin-top: 6px;
-  }
-
-  /* 社交行：贴左，与导航同一条左基线；上部加分隔线与导航分组 */
+  /* 社交行：贴左，与刊名同一条左基线；上部加分隔线分组 */
   .ed-masthead-foot {
     align-items: flex-start;
-    gap: 12px;
-    margin-top: 32px;
-    padding-top: 20px;
+    gap: var(--ed-space-sm);
+    margin-top: var(--ed-space-lg);
+    padding-top: var(--ed-space-md);
     border-top: 1px solid var(--border);
     width: 100%;
   }
   .ed-social { justify-content: flex-start; }
   .ed-social a { width: 34px; height: 34px; }
 
-  /* 右栏：文章流进第 2 列，顶边与左栏站名对齐 */
+  /* ============ 右列第 1 行：导航（吸顶） ============
+     与左列 header 顶边齐平（都在第 1 行开始），但只占右列 —— 不通栏，
+     因此左列完全不被它侵占。
+
+     跨两行（1 / span 2）是为了拿到 sticky 的位移空间：作为 grid item，
+     sticky 只能在自己的 grid area 里移动，若只占第 1 行，活动范围就只有
+     导航条自身高度，等于吸不住；跨满内容区高度后才能真正停在视口顶部。
+
+     align-self: start 必须写 —— 跨行 item 默认 stretch，会被拉到整个
+     右列高度，背景也就铺满整列、把内容全盖住。 */
+  .ed-front-nav {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: start;
+    margin: 0;
+    padding-bottom: var(--ed-space-md);
+    /* 与左列刊名的基线对齐：刊名行高 1.28 × 1.68rem ≈ 34px，
+       导航项行高 ~21px，补上内边距让两者的文字中线接近；
+       8px 同时让吸顶状态（top: 0）下文字不贴着视口顶边。 */
+    padding-top: var(--ed-space-xs);
+  }
+  .ed-front-nav .ed-menu,
+  .ed-front-nav #ed-menu {
+    justify-content: flex-start;
+    gap: var(--ed-space-xs) var(--ed-space-lg);
+  }
+  .ed-front-nav .ed-menu a,
+  .ed-front-nav #ed-menu a {
+    display: inline-block;
+    font-size: .9rem;
+    white-space: normal;
+  }
+
   .ed-body {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 2;
     min-width: 0;
     max-width: none;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    /* 顶部留白统一在这里给，而不是各页自己写：
+         --ed-nav-h  让出吸顶导航的高度（导航跨两行，否则会压住内容）
+         --ed-space-xl 导航 → 内容首块 的间距
+       之前这段留白写在首页的 .ed-posts 上，其余页没有，
+       于是切换标签时内容首块的顶边会跳一段。 */
+    padding-top: calc(var(--ed-nav-h) + var(--ed-space-xl));
   }
-  .ed-body .ed-grid-head { padding-top: 0; }
 
-  /* 文章单列流（不做拼贴），行距略收 */
-  .ed-grid { grid-template-columns: 1fr; column-gap: 0; }
-  .ed-card { padding: 24px 0 22px; }
-  .ed-card-title { font-size: 1.44rem; }
-  .ed-card-desc { font-size: 1rem; }
+  /* 最新文章：与吸顶导航拉开距离（导航是半透明底之上的框架线，
+     内容贴太近会显得挤）。栏目头的粗线与导航的细线因此有清晰层次。 */
+  /* 首页文章块不再自带顶部留白：与其余标签页共用 .ed-body 的 padding-top */
+  .ed-posts { padding-top: 0; }
+
+  /* ---------- 单页导航：右列内容区 ---------- */
+  /* 切换目标（/posts/、/tags/…）是完整页面，自带居中与外边距；
+     放进右列后这些由 .ed-body 提供，需清掉，否则内容会向内缩进。 */
+  /* 加载中：淡出旧内容，避免"点了没反应" */
+  .ed-body.is-loading { opacity: .4; transition: opacity .16s ease; }
+  /* 内容区接收键盘焦点时不要显示焦点框（它是容器，不是控件） */
+  .ed-body:focus { outline: none; }
+
+  /* 项目区块：两列铺开。与上方卡片流的间距统一为 xl */
+  .ed-projects {
+    margin-top: var(--ed-space-xl);
+    padding-top: var(--ed-space-lg);
+  }
+  .ed-projects-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
   /* 页脚与统一容器同宽（footer 不在 .main 内，取不到 --main-width 覆盖，需显式设定） */
   .footer {

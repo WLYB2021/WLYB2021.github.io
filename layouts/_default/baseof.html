@@ -17,9 +17,11 @@
 {{- if .IsHome -}}
 {{- print " home" -}}
 {{- end -}}
-{{- /* 文章页（非 archives/search 的 page）：加 ed-single-body，
-       供宽屏隐藏主题顶栏（导航已并入左栏）。 */ -}}
-{{- if and (eq .Kind `page`) (ne .Layout `archives`) (ne .Layout `search`) -}}
+{{- /* 文章页（非 archives/search/page 的 page）：加 ed-single-body，
+       供宽屏隐藏主题顶栏（导航已并入悬浮块）。
+       layout: "page"（如 /about/）不加 —— 它用的是朴素模板，没有悬浮导航，
+       整页打开时若隐藏顶栏就彻底没有导航可点了。 */ -}}
+{{- if and (eq .Kind `page`) (ne .Layout `archives`) (ne .Layout `search`) (ne .Layout `page`) -}}
 {{- print " ed-single-body" -}}
 {{- end -}}
 {{- if eq site.Params.defaultTheme `dark` -}}

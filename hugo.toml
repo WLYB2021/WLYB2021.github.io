@@ -4,11 +4,17 @@ defaultContentLanguage = "zh"
 title = "Xi 的博客"
 theme = "PaperMod"
 enableRobotsTXT = true
-enableGitInfo = false
+# GitInfo：让每篇文章拿到真实的 lastmod（最后提交时间），meta 里可显示
+# 「更新于」。CI 里 checkout 已带 fetch-depth: 0，本地预览也生效。
+enableGitInfo = true
 summaryLength = 30
 hasCJKLanguage = true
 # 忽略主题在更高版本 Hugo 下的历史告警
 ignoreLogs = ["warning-partial-superfluous-prefix"]
+
+# lastmod 取值顺序：显式 front matter > git 提交时间 > date
+[frontmatter]
+lastmod = [":git", "lastmod", "date"]
 
 # ---------- 顶层导航 ----------
 # 改 url 即可增删菜单项；weight 控制顺序（小的靠左）
@@ -21,6 +27,11 @@ weight = 5
 name = "文章"
 url = "/posts/"
 weight = 10
+
+[[menu.main]]
+name = "标签"
+url = "/tags/"
+weight = 15
 
 [[menu.main]]
 name = "归档"
@@ -42,7 +53,6 @@ pagerSize = 10
 
 [taxonomies]
 tag = "tags"
-category = "categories"
 
 [markup]
 [markup.highlight]
@@ -84,13 +94,24 @@ ShowRssButton = true
 DisplayFullLangName = false
 comments = true
 mainSections = ["posts"]
+# 文章页 meta 显示「更新于 X」（lastmod 与 date 不同天时才出现）
+showLastMod = true
+
+# ---------- 访问统计（可选） ----------
+# 接入后在站点层面即可生效；不接入时下面整段留空无副作用。
+# PaperMod 原生支持 Google Analytics：填测量 ID 并取消注释。
+# [params.analytics.google]
+# SiteVerificationTag = "G-XXXXXXX"
+# 另可选自托管 Umami/Plausible：本主题未内置，需在 extend_head.html 自行加 <script>。
 
 # ---------- 站点图标 ----------
-# 替换 static/favicon.svg 为自己的图标（建议 64×64，深底浅字）
+# favicon 用 SVG；PaperMod 的 <link> 硬编码 type="image/png"，因此另备
+# 两张 PNG（favicon-16x16.png / favicon-32x32.png，与 SVG 同图形），
+# 避免「声明 png 实际返回 svg」的 MIME 错配。
 [params.assets]
 favicon = "favicon.svg"
-favicon16x16 = "favicon.svg"
-favicon32x32 = "favicon.svg"
+favicon16x16 = "favicon-16x16.png"
+favicon32x32 = "favicon-32x32.png"
 
 # ---------- SEO / 分享卡片 ----------
 # keywords 用英文逗号分隔；填 5~10 个你真正在写的主题词
@@ -99,13 +120,19 @@ keywords = ["技术笔记", "kotlin", "kmp", "跨平台", "思考", "折腾", "�
 images = ["images/og-default.png"]
 # 主页与各页面是否输出 canonical / OG 元信息（PaperMod 默认开启）
 
-# ---------- 首页模式 ----------
-# mode = ["profile", "home"]：侧边栏显示个人名片，首页保留文章流
-# 卡片渲染见 layouts/partials/profile_card.html（覆盖主题的失效实现）
+# ---------- 首页（由 layouts/index.html 自建模板读取，主题不感知这些键） ----------
+[params.home]
+postsHeading = "最新文章"
+# 首页最多展示几篇文章；0 = 全部
+postsLimit = 5
+# 卡片是否显示日期 / 阅读时长（post_meta partial）
+showMeta = true
+
+# ---------- 左列刊头（宽屏左栏 / 窄屏顶部报头共用） ----------
 [params.profile]
-mode = ["profile", "home"]
 title = "Xi"
 subtitle = "Writing what's worth keeping."
+# 刊名下的第二段自我介绍
 desc = "No fixed theme, no persona. Just notes worth keeping — a detour, an idea, or the clarity that comes after a mistake."
 # 头像：把图片放到 static/images/ 后填路径，如 "images/avatar.jpg"；留空不显示
 imageUrl = ""
@@ -113,19 +140,13 @@ imageTitle = "Xi"
 imageWidth = 150
 imageHeight = 150
 
-# 首页文章流
-postsHeading = "最新文章"
-homePostsLimit = 5
-# true 时首页文章卡片不显示日期 / 阅读时长
-hideMeta = false
-
 # ---------- 联系方式 ----------
 # 邮箱只填这一处，社交图标会自动引用，改地址不用改两遍
 email = "yuxi279239@163.com"
 
-# ---------- 社交图标（侧边栏） ----------
-# 不需要的条目整段删除即可；完整图标名见：
-# https://github.com/adityatelange/hugo-PaperMod/tree/master/assets/icons
+# ---------- 社交图标（报头） ----------
+# 不需要的条目整段删除即可；index.html 按 icon 名从主题 svg.html 取图标，
+# 邮箱统一读上面的 params.email（改地址不用改两遍）。
 [[params.social]]
 name = "GitHub"
 url = "https://github.com/WLYB2021"
@@ -134,25 +155,24 @@ weight = 1
 
 [[params.social]]
 name = "Email"
-url = "mailto:you@example.com"
+url = "mailto:yuxi279239@163.com"
 icon = "email"
 weight = 2
 
-# ---------- 社交图标旧键名 ----------
-# PaperMod v8.0 的 index_profile.html 读的是 socialIcons（复数）。
-# 当前 profile 卡片已由 layouts/partials/profile_card.html 接管，
-# 读的是上面的 params.social；此处仅为兼容主题旧实现保留。
-[[params.socialIcons]]
-name = "GitHub"
-url = "https://github.com/WLYB2021"
-icon = "github"
-weight = 1
+# 站点 RSS；svg.html 内置 rss 图标
+[[params.social]]
+name = "RSS"
+url = "/index.xml"
+icon = "rss"
+weight = 3
 
-[[params.socialIcons]]
-name = "Email"
-url = "mailto:you@example.com"
-icon = "email"
-weight = 2
+# ---------- 底部版权 ----------
+# 主题 footer.html 只认三个键：footer.hideCopyright（隐藏 © 行）、
+# footer.text（自定义文本）、顶层 copyright（整体替换默认 © 行）。
+# 此前的 showCopyright / showPoweredBy / copyright 均为主题不读的死配置，已删。
+# 年份由主题自动取构建年（now.Year），不会过期。
+[params.footer]
+text = "Writing what's worth keeping."
 
 # ---------- Giscus 评论 ----------
 # 已配置完成（https://giscus.app 生成）
@@ -178,7 +198,7 @@ enable = true
 fuzzy = true
 heading = true
 regex = false
-tagnames = ["tag", "category"]
+tagnames = ["tag"]
 
 # ---------- 相关文章 ----------
 [params.related]
@@ -186,9 +206,3 @@ threshold = 80
 toLower = false
 includeNewer = true
 count = 8
-
-# ---------- 底部版权 ----------
-[params.footer]
-showCopyright = true
-showPoweredBy = true
-copyright = "© 2026 Xi · Built with Hugo & PaperMod"

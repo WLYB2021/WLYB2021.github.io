@@ -1,0 +1,35 @@
+{{- /* 文章 meta（覆盖主题 post_meta.html）
+  ---------------------------------------------------------------
+  在主题原逻辑（日期 / 阅读时长 / 字数 / 作者）基础上追加：
+    lastmod —— 仅在文章页且「更新时间与发布日期不同天」时显示「更新于 X」。
+    依赖 hugo.toml 的 enableGitInfo = true（CI 已 fetch-depth: 0）与
+    params.showLastMod = true；关掉开关即回到主题默认行为。
+*/ -}}
+{{- $scratch := newScratch }}
+
+{{- if not .Date.IsZero -}}
+{{- $scratch.Add "meta" (slice (printf "<span title='%s'>%s</span>" (.Date) (.Date | time.Format (default "January 2, 2006" site.Params.DateFormat)))) }}
+{{- end -}}
+
+{{- if (.Param "ShowReadingTime") -}}
+{{- $scratch.Add "meta" (slice (i18n "read_time" .ReadingTime | default (printf "%d min" .ReadingTime))) }}
+{{- end -}}
+
+{{- if (.Param "ShowWordCount") -}}
+{{- $scratch.Add "meta" (slice (i18n "words" .WordCount | default (printf "%d words" .WordCount))) }}
+{{- end -}}
+
+{{- /* 更新时间：git 提交驱动的 lastmod；不同天才显示，避免每篇都挂着重复日期 */ -}}
+{{- if and (.Param "showLastMod") (eq .Kind "page") (not .Lastmod.IsZero) (not .Date.IsZero) (gt .Lastmod.Unix .Date.Unix) -}}
+{{- $scratch.Add "meta" (slice (printf "<span title='最后更新 %s'>更新于 %s</span>" (.Lastmod) (.Lastmod | time.Format "2006-01-02"))) }}
+{{- end -}}
+
+{{- if not (.Param "hideAuthor") -}}
+{{- with (partial "author.html" .) }}
+{{- $scratch.Add "meta" (slice .) }}
+{{- end }}
+{{- end }}
+
+{{- with ($scratch.Get "meta") }}
+{{- delimit . "&nbsp;·&nbsp;" | safeHTML -}}
+{{- end -}}
