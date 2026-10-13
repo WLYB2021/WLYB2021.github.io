@@ -1114,8 +1114,13 @@ body.home .main { padding-top: 28px; }
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--theme);
+  /* 与 .list 页面 body 背景一致：亮色 list 页 body 是 --code-bg（浅灰），
+     之前写 --theme（白），于是亮色下导航条比页面白一截 —— 即部署后看到的
+     "导航栏与背景不一致"。深色 list 页 body 是 --theme，见下方 .dark 规则。 */
+  background: var(--code-bg);
 }
+/* 深色：主题 .dark.list 的 body 背景是 --theme，导航条同取 --theme 才匹配 */
+.dark .ed-front-nav { background: var(--theme); }
 
 /* 报头内导航。
    注意：主题 header.css 里有 `#menu { margin:auto var(--gap) }` 与

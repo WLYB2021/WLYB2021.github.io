@@ -14,8 +14,12 @@
 # 编辑器
 .vscode/
 .idea/
+.obsidian/
 .DS_Store
 Thumbs.db
 
 # 系统
 *.tmp
+
+# 临时备份（DSH 会话产物）
+/.dsh-backup/

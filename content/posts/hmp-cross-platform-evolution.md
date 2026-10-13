@@ -14,11 +14,11 @@ description: "HMP 个人项目的跨平台架构演进实录：从单模块 Andr
 <!--more-->
 ---
 
-### 引子
+## 引子
 
 HMP 是一个纯本地的音乐播放器，个人项目。起点是单模块的 Android 应用，终点是一套 Compose Multiplatform 代码同时跑在 Android、iOS、Desktop 上。
 
-它走完了论证篇描述的三个阶段：**单体 → 模块 → 共享**。共享阶段内部又分两步，先共享逻辑层，再共享 UI 层。下面按这个顺序展开，每一步都对应到仓库里的具体出处。
+它走完了论证篇描述的三个阶段：**单体 → 模块 → 共享**。共享阶段内部又分两步，先共享逻辑层，再共享 UI 层。下面按这个顺序展开，每一步都给出仓库里的出处。
 
 ---
 
@@ -165,13 +165,13 @@ include(":feature-ui")    // Compose 页面与组件
 
 同期还有一次边界试探：歌词解析器（LRC）从各端实现上提到 `shared`，Android 与 Desktop 共用。共享边界第一次越过"纯逻辑"，碰到 UI 相关的东西，没有引发问题。
 
-桌面端证明了"能共享"，但它自己也带一份独立 UI。至此三份界面并行维护，成本随功能增长——这份成本由谁来承担，是下一章的事。
+桌面端证明了"能共享"，但它自己也带一份独立 UI。至此三份界面并行维护，成本随功能增长。
 
 ---
 
 ### 七 · 共享 UI 层：迁移式提取与旧层删除
 
-Android Compose、iOS SwiftUI、Desktop Compose 三份 UI 的维护成本已经压不住，共享边界需要第二次移动——越过 UI。
+Android Compose、iOS SwiftUI、Desktop Compose 三份 UI 的维护成本已经压不住，共享边界需要再往外挪一次，这次要跨过 UI。
 
 #### 一条被作废的重写路线
 
@@ -221,13 +221,13 @@ v7.0.0 shared-ui 跨平台架构迁移
 
 **共享边界越过 UI**，Android 与 Desktop 开始共用一套界面。方案里另附两条执行纪律：迁移与整理分两阶段不混做；不做纵向切片，按可运行闭环推进（壳 → 首页骨架 → 列表主路径 → 播放闭环 → 横向铺满）。
 
-iOS 在这一步没有跟上。它的 SwiftUI 界面仍在，共享层对它是空的。
+iOS 在这一步没有跟上：它的 SwiftUI 界面还在自己维护，没用上共享层。
 
 ---
 
 ### 八 · 共享 UI 的收尾：iOS 全量切换
 
-`shared-ui` 增加 iOS targets；`shared-ios` 聚合框架把 `shared` + `shared-ui` 链接成单一 `sharedIos.framework` 接入 CocoaPods。三个决策都不是偏好，是被约束逼出来的：
+`shared-ui` 增加 iOS targets；`shared-ios` 聚合框架把 `shared` + `shared-ui` 链接成单一 `sharedIos.framework` 接入 CocoaPods。这三个决策各有具体的约束来源：
 
 - **单一聚合 framework**：规避双静态框架 duplicate symbol、双动态框架 Koin 全局分裂
 - **只编 `iosArm64` + `iosSimulatorArm64`**：`navigation3-ui` 没有 `iosX64` 构件，Intel 模拟器走 Rosetta
@@ -257,8 +257,6 @@ v7.1.0 iOS 切换到共享层 Compose UI
 
 **R3 · 桌面端目录管理整块丢失（入口没搬）**
 删掉旧桌面 UI 层时，完整的目录管理（VM 四个 mutation + 两个 UI 区块 + 目录选择器）没搬进新版 `LibrarySettingsScreen`，但**数据层仍完好**——`SettingsRepositoryImpl.desktop` 还在读配置，只是没有任何地方能写入它。后果：桌面端只能扫描默认目录，音乐放在别处无法入库。
-
-三种形态分别是实现没搬、声明丢了、入口没搬，**都表现为编译通过**。
 
 #### 点检的产物
 
@@ -301,8 +299,4 @@ v7.1.0 iOS 切换到共享层 Compose UI
 - **设计文档**：iOS 适配设计、接口冻结映射表
 - **审查报告**：能力搬迁点检、架构审查
 
-（对应论证篇第十章："架构资产不只包括代码，也包括决策的来路。"）
-
----
-
-*本文是论证篇《从单体到共享：应用架构演进的一条可行路径》的实践篇。论证篇讲路径的通用逻辑，本篇是这条逻辑的一次完整落地记录。*
+这批文档对应论证篇第十章那句"架构资产不只包括代码，也包括决策的来路"。
