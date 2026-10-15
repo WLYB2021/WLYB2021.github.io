@@ -1,0 +1,185 @@
+{{- /*
+  单页导航（所有外壳页共用：首页 / 列表 / 标签 / 归档 / 关于 / 搜索）
+  ---------------------------------------------------------------
+  行为：左列刊头与导航行不动，只把右列 #ed-content 的内容换掉。
+
+  为什么每个外壳页都能当宿主：
+    这些页面现在共用同一套外壳（见 baseof.html + partials/ed_shell 相关），
+    DOM 结构一模一样，所以任何一页都能原地切换 —— 不必再"先跳回首页
+    再由首页加载目标"（旧版 spa_handoff.html 那套回程逻辑随之删除，
+    它也带来了多余的两次网络往返）。
+
+  白名单 isSpaPath 决定哪些目标可以在右列打开：
+    / 、/posts/ 与分页、/tags/ 与 /tags/x/、/archives/、/about/、/search/
+  文章详情（/posts/<slug>/）不在其中：它自带双栏 + 目录 + 悬浮 header，
+  塞进右列会嵌套冲突，因此保持整页跳转（isArticle 直接放行）。
+
+  提取目标为什么是 #ed-content 而不是 main：
+    独立页现在也带外壳，main 里装的是"导航 + 刊头 + 内容"，直接注入会套娃。
+    取抓取文档里的 #ed-content，得到的才是纯内容。
+
+  渐进增强：不支持 fetch / pushState、或 JS 报错时，所有链接都是普通 <a>，
+  行为与整页跳转完全一致；各页面仍是可直连、可被索引的独立 URL。
+*/ -}}
+<script>
+  (function () {
+    var front = document.querySelector('.ed-front');
+    var nav = document.querySelector('.ed-front-nav');
+    var box = document.getElementById('ed-content');
+    /* 导航与内容区都在外壳里；点击委托挂在 main 上（导航可能被移出 .ed-front） */
+    var scope = document.querySelector('main.main') || front;
+    if (!front || !nav || !box || !scope) return;
+    if (!window.history || !history.pushState || !window.fetch || !window.DOMParser) return;
+
+    /* 判断"站内链接"要以站点自己的 origin 为基准，不能用 location.origin：
+       导航由 absLangURL 渲染成绝对地址（https://wlyb2021.github.io/posts/），
+       而本地预览跑在 http://localhost:1313 —— 拿 location.origin 去比会全部
+       判成跨域，拦截器直接放行，表现就是"点了没反应"（变成整页跳转）。
+       请求与 pushState 仍用相对路径，本地预览因此也能正常取到内容。 */
+    var homePath = '/';
+    var siteOrigin = location.origin;
+    try {
+      var homeURL = new URL(front.getAttribute('data-home-path'), location.href);
+      homePath = homeURL.pathname || '/';
+      siteOrigin = homeURL.origin || location.origin;
+    } catch (e) {}
+
+    /* 规范化：去掉尾斜杠与 index.html，便于比较 /posts 与 /posts/ */
+    function norm(p) {
+      p = String(p || '/').split('?')[0].split('#')[0];
+      p = p.replace(/\/index\.html$/, '/');
+      if (p.length > 1) p = p.replace(/\/+$/, '');
+      return p || '/';
+    }
+
+    /* 本页自身的内容就是"回到本页"时的底板。外壳页人人可当宿主，
+       所以不再写死首页路径 —— 在 /posts/ 上打开本脚本时，缓存里
+       预置的就是 /posts/ 这一份。 */
+    var currentPath = location.pathname;
+    var cache = Object.create(null);
+    cache[norm(currentPath)] = { html: box.innerHTML, title: document.title };
+
+    /* 文章详情页：/posts/<slug>/ —— 独立标签页，不进右列 */
+    function isArticle(p) {
+      p = norm(p);
+      if (p.indexOf('/posts/') !== 0) return false;
+      return p.indexOf('/posts/page/') !== 0;   /* /posts/page/2/ 是列表分页，不算 */
+    }
+
+    /* 白名单：可在右列打开的内容（与各页面自己的外壳结构一一对应） */
+    function isSpaPath(p) {
+      p = norm(p);
+      if (p === norm(homePath)) return true;
+      if (p === '/posts' || p.indexOf('/posts/page/') === 0) return true;
+      if (p === '/tags' || p.indexOf('/tags/') === 0) return true;
+      if (p === '/archives') return true;
+      if (p === '/about' || p === '/search') return true;
+      return false;
+    }
+
+    function entryFor(path) {
+      return cache[norm(path)] || null;
+    }
+
+    /* innerHTML 注入的 <script> 不会执行，需要搬一次 */
+    function runScripts(root) {
+      var list = root.querySelectorAll('script');
+      Array.prototype.forEach.call(list, function (old) {
+        var s = document.createElement('script');
+        Array.prototype.forEach.call(old.attributes, function (a) {
+          if (a.name !== 'src') s.setAttribute(a.name, a.value);
+        });
+        if (old.src) { s.src = old.src; }
+        else { s.textContent = old.textContent; }
+        document.head.appendChild(s);
+        if (!old.src) document.head.removeChild(s);
+      });
+    }
+
+    /* 导航项的高亮由 <span> 承载（nav_menu.html 的结构） */
+    function markActive(path) {
+      var target = norm(path);
+      Array.prototype.forEach.call(nav.querySelectorAll('a[href]'), function (a) {
+        var href;
+        try { href = new URL(a.getAttribute('href'), location.href).pathname; } catch (e) { return; }
+        var span = a.querySelector('span');
+        if (span) span.className = (norm(href) === target) ? 'active' : '';
+      });
+    }
+
+    function apply(entry, path, push) {
+      /* 先更新地址栏，再注入并执行脚本。
+         顺序很重要：页面脚本以 location 为准（/search/ 要从 ?q= 取初始关键词），
+         脚本先跑就会读到上一个 URL 的 query，表现为"链接带着关键词进来却是空结果"。
+         缓存键 norm() 会丢掉 query，所以同一 /search/ 的 HTML 复用无副作用。 */
+      currentPath = path;
+      if (push) history.pushState({ path: path }, '', path);
+      box.innerHTML = entry.html;
+      runScripts(box);
+      document.title = entry.title;
+      markActive(path);
+      window.scrollTo(0, 0);
+      /* 键盘/读屏用户：把焦点带进新内容区 */
+      box.focus({ preventScroll: true });
+    }
+
+    function load(path, push) {
+      if (norm(path) === norm(currentPath)) { window.scrollTo(0, 0); return; }
+      var cached = entryFor(path);
+      if (cached) { apply(cached, path, push); return; }
+
+      box.classList.add('is-loading');
+      fetch(path, { credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) throw new Error(res.status);
+          return res.text();
+        })
+        .then(function (text) {
+          var doc = new DOMParser().parseFromString(text, 'text/html');
+          /* 优先取纯内容容器；取不到才退回 main（老结构兜底） */
+          var inner = doc.querySelector('#ed-content') || doc.querySelector('main.main') || doc.querySelector('main');
+          var entry = {
+            html: inner ? inner.innerHTML : '<p class="ed-empty">内容加载失败。</p>',
+            title: (doc.title || document.title)
+          };
+          cache[norm(path)] = entry;
+          apply(entry, path, push);
+        })
+        .catch(function () {
+          /* 抓取失败就退回整页跳转，不让用户卡住 */
+          location.href = path;
+        })
+        .then(function () {
+          box.classList.remove('is-loading');
+        });
+    }
+
+    /* 导航行 + 内容区里的站内链接（如分页、标签）都走切换 */
+    scope.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var a = e.target.closest ? e.target.closest('a[href]') : null;
+      if (!a) return;
+      if (a.target && a.target !== '_self' && a.target !== '') return;
+      if (a.hasAttribute('download') || a.getAttribute('rel') === 'external') return;
+
+      var url;
+      try { url = new URL(a.getAttribute('href'), location.href); } catch (err) { return; }
+      /* 站外链接照常跳转。导航用相对地址，origin 通常就是 location.origin；
+         仍兼容 absLangURL 时代的绝对地址（与站点 origin 相同也算站内）。 */
+      if (url.origin !== location.origin && url.origin !== siteOrigin) return;
+
+      /* 文章详情：不拦截，交给浏览器正常整页跳转（不进右列内容区）。 */
+      if (isArticle(url.pathname)) return;
+      if (url.hash && norm(url.pathname) === norm(currentPath)) return;  /* 页内锚点 */
+      if (!isSpaPath(url.pathname)) return;                              /* 其余整页加载 */
+
+      e.preventDefault();
+      load(url.pathname + url.search, true);
+    });
+
+    window.addEventListener('popstate', function () {
+      load(location.pathname + location.search, false);
+    });
+  })();
+</script>

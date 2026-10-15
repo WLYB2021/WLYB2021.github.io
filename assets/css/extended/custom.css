@@ -48,7 +48,7 @@
   --ed-measure: 760px;
   --ed-measure-max: 900px;
   --ed-wide: 1080px;        /* 宽屏断点：以下=单栏，以上=分栏 */
-  --ed-col-gap: 64px;       /* 正文列 → 目录列 的净间距 */
+  --ed-col-gap: 64px;       /* 目录列 → 正文列 的净间距 */
   --ed-gutter: 40px;        /* 宽屏容器左右内边距（文章页 / 首页 / 列表页共用） */
   --ed-page-pad-x: 20px;    /* 窄屏左右的页面内边距 */
   --ed-page-top: 40px;      /* 页面顶部内边距（首页会覆盖成 sm） */
@@ -79,21 +79,22 @@
 /* ============================================================
    文章页 · 双栏 + 迁移布局
    ------------------------------------------------------------
-   恒定结构：
-     .ed-main   左栏 = 文章正文（永不移动）
-     .ed-rail   右栏 = 目录（永不移动）
+   恒定结构（目录在左，正文在右）：
+     .ed-rail   左栏 = 目录（永不移动）
+     .ed-main   右栏 = 文章正文（永不移动）
    迁移主体：
      .ed-float  = 功能入口 + 文章 header
 
    几何策略（关键）：
      .ed-float 用 `position: sticky` 吸附在视口顶部 —— 这样它
      永远不会随页面滚走。横向迁移由 JS 写 translateX 完成：
-       顶部态  → translateX(0)    横向停在左栏起点
-       下滑态  → translateX(+Δ)   横向平移到右栏起点
-     Δ 由两栏的实际像素差算出，故与容器宽度无关。
+       顶部态  → translateX(0)    横向停在右栏（正文）起点
+       下滑态  → translateX(−Δ)   横向平移到左栏（目录）起点
+     Δ 由两栏的实际像素差算出（rail.left − main.left，此处为负），
+     故与容器宽度无关，方向换了也不用改 JS。
 
-     顶部态时，左栏正文用 padding-top 让出悬浮块的初始高度，
-     于是"入口 → header → 正文"在左栏里看起来是同列顺排。
+     顶部态时，右栏正文用 padding-top 让出悬浮块的初始高度，
+     于是"入口 → header → 正文"在右栏里看起来是同列顺排。
 
    视觉形态由进度 p (= 横向迁移进度) 驱动：
      header 从「夸张大标题」收敛为「简洁小标题」
@@ -164,24 +165,24 @@
     padding: 0 var(--ed-gutter);
     padding-top: var(--ed-top);
     display: grid;
-    /* 正文列吃满剩余宽度（1fr），目录列定宽 —— 目录因此恒贴右缘，
-       正文↔目录的净间距恒等于 column-gap，不产生死区。
-       正文行宽由列内 .ed-main > * 的 max-width: --ed-measure 单独封顶。 */
+    /* 目录列在前、正文列吃满剩余宽度：目录因此恒贴左缘，正文↔目录的净间距
+       恒等于 column-gap，不产生死区（与"目录在左"的阅读习惯一致）。
+       正文行宽仍由列内 .ed-main > * 的 max-width: --ed-measure 单独封顶。 */
     grid-template-columns:
-      minmax(0, 1fr)
-      minmax(0, var(--ed-rail-w));
+      minmax(0, var(--ed-rail-w))
+      minmax(0, 1fr);
     column-gap: var(--ed-col-gap);
     align-items: start;
   }
   .main { --main-width: none; }
   body.ed-single-body .header { display: none; }
 
-  /* ---------- 左栏：正文（恒定） ---------- */
+  /* ---------- 右栏：正文（恒定） ---------- */
   /* 注意：不写 justify-self:start —— 让 .ed-main 撑满整个网格列，
-     内部再用 max-width 把文字锁在舒适行宽。这样「正文右缘 → 目录左缘」
+     内部再用 max-width 把文字锁在舒适行宽。这样「目录右缘 → 正文左缘」
      的距离恒等于 column-gap，不会因为文字行宽固定而多出一段死区。 */
   .ed-single .ed-main {
-    grid-column: 1;
+    grid-column: 2;
     grid-row: 1;
     width: 100%;
     min-width: 0;
@@ -197,10 +198,10 @@
     max-width: var(--ed-measure);
   }
 
-  /* ---------- 右栏：目录（恒定） ---------- */
+  /* ---------- 左栏：目录（恒定） ---------- */
   .ed-single .ed-rail {
     display: block;
-    grid-column: 2;
+    grid-column: 1;
     grid-row: 1;
     max-width: none;
     margin: 0;
@@ -230,14 +231,15 @@
   .ed-single .ed-float {
     position: sticky;
     top: var(--ed-top);
-    grid-column: 1;
+    /* 与正文同列（第 2 列）：顶部态贴在正文上方 */
+    grid-column: 2;
     grid-row: 1;
     justify-self: start;
     max-width: 100%;
     margin: 0;
     z-index: 6;
     isolation: isolate;
-    /* 宽度：正文列宽 → 右栏宽 */
+    /* 宽度：正文列宽 → 目录列宽 */
     width: var(--ed-measure);
     transform: translateX(0);
     /* 迁移动画：位移略长于形态变化，让"飘过去"的感觉更明确 */
@@ -358,7 +360,7 @@
      迁移后的状态（.ed-shell.is-pinned）
      ============================================================ */
 
-  /* 悬浮块：平移到右栏、收窄到右栏宽度、底板外扩遮住穿透内容 */
+  /* 悬浮块：平移到左栏（目录列）、收窄到该列宽度、底板外扩遮住穿透内容 */
   .ed-single .ed-shell.is-pinned .ed-float {
     width: var(--ed-rail-w);
     transform: translateX(var(--ed-tx, 0px));
@@ -392,10 +394,17 @@
     margin: .2em 0 .4em;
   }
   .ed-single .ed-shell.is-pinned .ed-float-header .post-description {
-    opacity: 0;
-    max-height: 0;
-    font-size: .7rem;
-    margin: 0;
+    /* 迁到左栏（pinned）后**不折叠**副标题：它就是文章导语，而正文开头那段
+       重复的引用块已经删掉，折叠掉读者滚到一半就再也看不到这句话了。
+       改为小字号 + 两行截断，保持紧凑（块变高会自动由 --ed-rail-h 推低目录）。 */
+    opacity: 1;
+    max-height: 4em;
+    font-size: .74rem;
+    line-height: 1.55;
+    margin: 0 0 .5em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
   .ed-single .ed-shell.is-pinned .ed-float-header .post-meta {
     font-size: .76rem;
@@ -406,13 +415,13 @@
     border-bottom-color: rgba(128, 128, 128, .35);
   }
 
-  /* 正文让位：pinned 后归零（顶部空间交给右栏使用） */
+  /* 正文让位：pinned 后归零（顶部空间交给目录列使用） */
   .ed-single .ed-main {
     transition: padding-top .42s cubic-bezier(.22, .61, .36, 1);
   }
   .ed-single .ed-shell.is-pinned .ed-main { padding-top: 0; }
 
-  /* 右栏让位：pinned 后撑出悬浮块高度，目录排在其下方。
+  /* 目录列让位：pinned 后撑出悬浮块高度，目录排在其下方。
      注意 spacer 只预留「入口 + header」的净高（不含底板外扩），
      因为外扩是绘制用的负外边距视觉效果，不占布局流。 */
   .ed-single .ed-rail-spacer {
@@ -425,7 +434,7 @@
 
   /* 目录自适应滚动：
      「入口 + header + 目录」总高可能超过视口（长目录尤其常见）。
-     此时不应把右栏整体撑出滚动条（那样目录尾部会被盒底裁掉、
+     此时不应把目录列整体撑出滚动条（那样目录尾部会被盒底裁掉、
      用户看不见最后几项），而是让目录自己吃掉剩余高度并独立滚动。
      max-height = 视口 - 顶部留白 - 已占用的块高。 */
   .ed-single .ed-shell.is-pinned .ed-rail .toc {
@@ -444,7 +453,7 @@
     border-radius: 3px;
   }
   .ed-single .ed-shell.is-pinned .ed-rail .toc::-webkit-scrollbar-track { background: transparent; }
-  /* 目录自身可滚后，右栏容器不再需要滚动，避免"双滚动条"打架 */
+  /* 目录自身可滚后，目录列容器不再需要滚动，避免"双滚动条"打架 */
   .ed-single .ed-shell.is-pinned .ed-rail {
     overflow: visible;
     max-height: none;
@@ -521,7 +530,7 @@ body.dark .ed-icon-moon { display: none; }
 body.dark .ed-icon-sun { display: block; }
 
 /* ============================================================
-   右栏目录（TOC）
+   左栏目录（TOC）
    ============================================================ */
 .ed-single .ed-rail .toc {
   background: transparent;
@@ -867,6 +876,39 @@ body.ed-toc-lock { overflow: hidden; }
 /* 卡片内的链接（如 meta 里的标签）要浮在覆盖层之上才能点 */
 .ed-card-meta a { position: relative; z-index: 2; }
 
+/* ---------- 首页并排卡片（.ed-cards--pair） ----------
+   首页只放"1 篇最新 + 1 篇随机"（见 hugo.toml [params.home]），两篇并排更好看，
+   于是把共用的发丝线卡片换成带边框的方卡片。序号仍沿用巨号描边字 ——
+   这是本站的卡片语言，换成小号 kicker 反而丢了一致性。
+   /posts/ 与归档页继续用 .ed-cards 的原始版式：那边是长列表，发丝线比边框耐看。 */
+.ed-cards--pair {
+  display: grid;
+  grid-template-columns: 1fr;          /* 窄屏单列 */
+  gap: var(--ed-space-md);
+}
+/* 断点取 768px：与文件里其它布局断点（767.98px）对齐。
+   卡在两列时内层只剩 ~270px 文字宽，中文标题会挤成每行八九个字，
+   所以宁可让窄屏单列铺满，也不在 640px 就并排。 */
+@media (min-width: 768px) {
+  .ed-cards--pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.ed-cards--pair .ed-card {
+  /* 四边描边替掉基类的底部分隔线；两列等高由 grid 默认的 stretch 保证 */
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--ed-space-md);
+  /* 方卡片里把序号列与列间距各收窄一档，给中文标题多留 ~16px 字宽 */
+  grid-template-columns: 3rem minmax(0, 1fr);
+  column-gap: var(--ed-space-sm);
+  transition: border-color .22s ease;
+}
+/* 覆盖基类 hover 的"整块右移"：方卡片加了内边距后位移会显得跳，只强调描边，
+   标题与序号的变色仍由基类规则负责。 */
+.ed-cards--pair .ed-card:hover {
+  padding-left: var(--ed-space-md);
+  border-color: var(--accent);
+}
+
 /* "查看全部文章 →"：卡片流之后的下一步入口 */
 .ed-all {
   display: inline-block;
@@ -1039,17 +1081,21 @@ body.ed-toc-lock { overflow: hidden; }
   margin-bottom: var(--ed-space-md);
   user-select: none;
 }
-/* 窄屏单列；宽屏两列（见下方媒体查询） */
+/* 项目卡片：与首页文章卡片同一套语言（描边 + 圆角），整块可点。
+   列数交给 auto-fit：只有一个项目时它独占整行，项目多了在宽屏自动排两列。 */
 .ed-projects-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--ed-space-2xs) var(--ed-space-xl);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--ed-space-md);
 }
 .ed-project {
   display: block;
-  padding: var(--ed-space-sm) 0;
-  border-bottom: none;
+  padding: var(--ed-space-md);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: border-color .18s ease;
 }
+.ed-project:hover { border-color: var(--accent); }
 .ed-project-name {
   display: block;
   font-family: var(--ed-serif);
@@ -1097,10 +1143,23 @@ body.ed-toc-lock { overflow: hidden; }
 }
 
 /* ---------- 导航行（右列第一行；窄屏位于报头之下） ---------- */
-/* 首页隐藏主题顶栏：导航已在正文行内，避免站名重复 */
-body.home .header { display: none; }
+/* 外壳页隐藏主题顶栏：导航已在正文行内，避免站名重复。
+   外壳页 = 首页 + 列表 / 标签 / 归档 / 关于 / 搜索（body.ed-shell-body，
+   见 layouts/_default/baseof.html）—— 这些页共用同一套框架，所以顶栏一律隐藏；
+   文章页由单独的 body.ed-single-body 规则处理，404 保持顶栏可见。 */
+body.home .header,
+body.ed-shell-body .header { display: none; }
 /* 顶栏隐藏后，正文不再让出顶栏高度 */
-body.home .main { padding-top: 28px; }
+body.home .main,
+body.ed-shell-body .main { padding-top: 28px; }
+
+/* 全站统一底色 = --theme（亮色纯白 / 深色主题灰）。
+   主题默认给 .list 页铺 --code-bg（浅灰），导致亮色下"外壳页浅灰、文章页纯白"
+   两种底色并存；这里覆盖成 --theme，与文章页一致（深色下本来两者都是 --theme，
+   现在亮暗两种模式只剩一条规则）。
+   注意 --code-bg 另有职责：它仍是行内代码的底色，所以不能拿它当页面底色，
+   否则亮色下行内 code 会与背景同色而看不见。 */
+body.ed-shell-body { background: var(--theme); }
 
 /* 导航行。窄屏：整页最上方，横向居中，底部发丝线与报头分隔；
    宽屏：右列第 1 行，与左列 header 顶边齐平、左对齐（宽屏规则在下方）。
@@ -1114,13 +1173,11 @@ body.home .main { padding-top: 28px; }
   position: sticky;
   top: 0;
   z-index: 20;
-  /* 与 .list 页面 body 背景一致：亮色 list 页 body 是 --code-bg（浅灰），
-     之前写 --theme（白），于是亮色下导航条比页面白一截 —— 即部署后看到的
-     "导航栏与背景不一致"。深色 list 页 body 是 --theme，见下方 .dark 规则。 */
-  background: var(--code-bg);
+  /* 与页面底色一致（外壳页统一为 --theme，见上方 body.ed-shell-body 规则）。
+     历史坑：这里曾写 --code-bg 去迁就主题给 list 页的浅灰底，亮色下导航条比
+     文章页白底"灰一档"；底色统一到 --theme 后，亮暗两种模式都取同一个值。 */
+  background: var(--theme);
 }
-/* 深色：主题 .dark.list 的 body 背景是 --theme，导航条同取 --theme 才匹配 */
-.dark .ed-front-nav { background: var(--theme); }
 
 /* 报头内导航。
    注意：主题 header.css 里有 `#menu { margin:auto var(--gap) }` 与
@@ -1651,14 +1708,13 @@ body.home .main { padding-top: 28px; }
   /* 内容区接收键盘焦点时不要显示焦点框（它是容器，不是控件） */
   .ed-body:focus { outline: none; }
 
-  /* 项目区块：两列铺开。与上方卡片流的间距统一为 xl */
+  /* 项目区块：与上方卡片流的间距统一为 xl */
   .ed-projects {
     margin-top: var(--ed-space-xl);
     padding-top: var(--ed-space-lg);
   }
-  .ed-projects-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  /* 项目卡片的列数由 .ed-projects-grid 的 auto-fit 决定，这里不再覆盖 ——
+     写死 repeat(2, …) 会让只有一个项目时它只占半行。 */
 
   /* 页脚与统一容器同宽（footer 不在 .main 内，取不到 --main-width 覆盖，需显式设定） */
   .footer {

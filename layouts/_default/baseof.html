@@ -1,7 +1,26 @@
-{{- /* 覆盖主题 baseof：仅新增首页 body.home 类，便于隐藏顶栏、排版报头 */ -}}
+{{- /*
+  覆盖主题 baseof：套"外壳" + 保留文章页原有结构
+  ---------------------------------------------------------------
+  三类页面：
+    1. 外壳页（首页 / 列表 / 标签 / 归档 / 关于 / 搜索）
+       共用 导航行 + 左列刊头 + 右列 #ed-content 这一套框架。
+       以前这套框架只写在 layouts/index.html 里，于是同一个 URL 直连和
+       经单页导航打开时形态不同（直连没有刊头、内容通栏）；现在两处
+       都由这里渲染，形态天然一致，而且各页面仍是可直连、可索引的独立 URL。
+    2. 文章页（single.html 的双栏 + 悬浮 header）不套外壳 —— 它自带导航。
+    3. 404 不套外壳 —— 它有自己的一组去处链接，不需要刊头。
+
+  单页导航脚本（partials/ed_spa.html）只在外壳页加载：它把 #ed-content
+  整块替换掉，因此每类内容模板照旧只写"栏目头 + 内容"，不必感知外壳。
+*/ -}}
 {{- if lt hugo.Version "0.112.4" }}
 {{- errorf "=> hugo v0.112.4 or greater is required for hugo-PaperMod to build" }}
 {{- end -}}
+
+{{- /* 文章页：kind=page 且 layout 不是 archives/search/plain（about 这类
+       静态页走 plain，属于外壳页）。 */ -}}
+{{- $isArticle := and (eq .Kind `page`) (not (in (slice `archives` `search` `plain`) (.Layout | default ``))) -}}
+{{- $isShell := not (or $isArticle (eq .Kind `404`)) -}}
 
 <!DOCTYPE html>
 <html lang="{{ site.Language }}" dir="{{ .Language.Direction | default "auto" }}">
@@ -17,22 +36,38 @@
 {{- if .IsHome -}}
 {{- print " home" -}}
 {{- end -}}
-{{- /* 文章页（非 archives/search/page 的 page）：加 ed-single-body，
-       供宽屏隐藏主题顶栏（导航已并入悬浮块）。
-       layout: "page"（如 /about/）不加 —— 它用的是朴素模板，没有悬浮导航，
-       整页打开时若隐藏顶栏就彻底没有导航可点了。 */ -}}
-{{- if and (eq .Kind `page`) (ne .Layout `archives`) (ne .Layout `search`) (ne .Layout `page`) -}}
+{{- if $isShell -}}
+{{- print " ed-shell-body" -}}
+{{- end -}}
+{{- if $isArticle -}}
 {{- print " ed-single-body" -}}
 {{- end -}}
 {{- if eq site.Params.defaultTheme `dark` -}}
 {{- print " dark" }}
 {{- end -}}
 " id="top">
+    {{- /* 顶栏：外壳页被 CSS 隐藏（导航已并入外壳），但必须保留在 DOM 里 ——
+           主题的 footer 脚本依赖 #theme-toggle 与 #menu，刊头的可见按钮
+           也靠代理点击它来工作。 */ -}}
     {{- partialCached "header.html" . .Page -}}
     <main class="main">
-        {{- block "main" . }}{{ end }}
+      {{- if $isShell -}}
+      <section class="ed-front" data-home-path="{{ "" | absLangURL }}">
+        <nav class="ed-front-nav" aria-label="站点导航">
+          {{- partial "nav_menu.html" . }}
+        </nav>
+        {{- partial "ed_masthead.html" . }}
+        {{- /* 右列内容区：单页导航切换时整块替换的就是这里 */ -}}
+        <div class="ed-body" id="ed-content" tabindex="-1">
+      {{- end -}}
+      {{- block "main" . }}{{ end -}}
+      {{- if $isShell -}}
+        </div>{{- /* /#ed-content */ -}}
+      </section>
+      {{- end -}}
     </main>
     {{ partialCached "footer.html" . .Layout .Kind (.Param "hideFooter") (.Param "ShowCodeCopyButtons") -}}
+    {{- if $isShell }}{{ partial "ed_spa.html" . }}{{ end -}}
 </body>
 
 </html>

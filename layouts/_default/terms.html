@@ -7,7 +7,6 @@
   版式沿用列表页：栏目头（标题 + 说明 + 计数）→ 行列表（名称 + 篇数）。
 */ -}}
 {{ define "main" }}
-{{- partial "spa_handoff.html" . -}}
 
 {{- if .Title }}
 {{- /* 判断是哪类 taxonomy 用 .Data.Singular（"tag" / "category"）：

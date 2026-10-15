@@ -1,0 +1,38 @@
+{{- /*
+  head 追加区（主题 head.html 末尾会调用本 partial）
+  ---------------------------------------------------------------
+  现状：整个站点没有任何访问统计，这里是**留好的接入点** —— 默认不输出任何内容，
+  所以加不加本文件对页面体积零影响。
+
+  主题的坑（别再用错）：
+    hugo.toml 里的 [params.analytics.*] 只输出「站点验证 meta 标签」
+    （google-site-verification / msvalidate.01 等），跟流量统计毫无关系。
+    PaperMod 对统计零支持，第三方脚本只能写在这里。
+
+  想接入时，把对应 <script> 贴到下面"接入区"即可（都在 head 里执行）：
+
+    · Umami（自托管，无 cookie，推荐给国内读者）
+        <script defer src="https://你的实例/script.js"
+                data-website-id="xxxxxxxx-xxxx-xxxx"></script>
+    · GoatCounter（免费托管）
+        <script data-goatcounter="https://你的名.goatcounter.com/count"
+                async src="//gc.zgo.at/count.js"></script>
+    · GA4（大陆常连不通，需同意横幅）
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+        <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}
+        gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
+
+  ⚠️ 必须一起做的第二件事：单页切换要手动上报。
+    站点所有外壳页共用一套单页导航（partials/ed_spa.html），点击导航只替换
+    #ed-content、不重新加载文档 —— 上面这些脚本默认只在首屏触发一次，
+    站内的后续切换（首页 → 文章列表 → 标签 → …）会被漏掉，
+    结果是数据只统计到入口页与直接打开的页面。
+    补法：在 ed_spa.html 的 apply() 里（地址栏已更新、内容已注入之后）各加一行：
+      Umami        → window.umami && umami.track()
+      GoatCounter  → window.goatcounter && goatcounter.count({path: path})
+      GA4          → gtag('event','page_view',{page_path: path})
+    参数 path 就是 apply() 的第二个入参，直接用即可。
+
+  以后要加别的第三方资源（字体、评论、埋点），也写在这个文件里。
+*/ -}}
+{{- /* ===== 接入区：把统计脚本贴在这里 ===== */ -}}

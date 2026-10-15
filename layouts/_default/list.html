@@ -17,8 +17,6 @@
   分页保留；面包屑移除（全站已用顶部「主页」入口代替）。
 */ -}}
 {{ define "main" }}
-{{- partial "spa_handoff.html" . -}}
-
   {{- $pages := union .RegularPages .Sections -}}
   {{- if .IsHome }}{{ $pages = where site.RegularPages "Type" "in" site.Params.mainSections }}{{ $pages = where $pages "Params.hiddenInHomeList" "!=" "true" }}{{ end -}}
   {{- /* 显式按日期倒序（新的在前），避免不同 Hugo 版本下 .Paginate 的

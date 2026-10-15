@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="128" height="128">
+  <!-- Safari 固定标签页图标：只用 alpha 通道，Safari 会按标签配色统一着色，
+       因此必须是单色剪影（这里用 evenodd 把「Xi」字形从圆角方块里挖成镂空）。
+       几何与 static/favicon.svg 完全一致：圆角矩形 rx14 +
+       path "M18 16h28v5.5H35.5V32H44v5.5H35.5V48H18z"。 -->
+  <path fill="#000" fill-rule="evenodd" d="M14 0H50A14 14 0 0 1 64 14V50A14 14 0 0 1 50 64H14A14 14 0 0 1 0 50V14A14 14 0 0 1 14 0ZM18 16h28v5.5H35.5V32H44v5.5H35.5V48H18Z"/>
+</svg>

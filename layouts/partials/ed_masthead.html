@@ -1,0 +1,59 @@
+{{- /*
+  左列刊头（外壳的一部分）
+  ---------------------------------------------------------------
+  宽屏固定在左栏，窄屏是内容上方的报头。
+  首页 / 列表 / 标签 / 归档 / 关于 / 搜索共用同一份 —— 无论直连还是经
+  单页导航切换过来，看到的框架完全一致（这正是"两种形态"问题的解法）。
+  参数：. = 当前 page（正文不用，取值都来自 site.*）
+*/ -}}
+{{- $profile := site.Params.profile | default dict -}}
+{{- $social := site.Params.social -}}
+{{- $posts := where site.RegularPages "Type" "in" site.Params.mainSections -}}
+<header class="ed-masthead">
+  <div class="ed-masthead-top">
+    <div class="ed-masthead-title">{{ site.Title }}</div>
+    <div class="ed-masthead-dek">{{ site.Params.description | default $profile.subtitle }}</div>
+    {{- with $profile.desc }}
+    <div class="ed-masthead-desc">{{ . }}</div>
+    {{- end }}
+  </div>
+
+  <div class="ed-masthead-foot">
+    {{- /* 计数取全站文章数（不是当前列表的条数）：刊头是站点级信息，
+           在 /tags/ 或 /archives/ 上也应当显示同样的"共几篇"。 */ -}}
+    <span class="ed-masthead-issue">{{ now.Format "2006" }} · {{ len $posts }} 篇</span>
+    <div class="ed-masthead-links">
+      {{- with $social }}
+      <div class="ed-social">
+        {{- range . }}
+        {{- $href := .url -}}
+        {{- if and (eq .icon "email") site.Params.email }}{{ $href = printf "mailto:%s" site.Params.email }}{{ end -}}
+        <a href="{{ $href | safeURL }}" target="_blank" rel="noopener noreferrer me"
+           title="{{ .name }}" aria-label="{{ .name }}">{{ partial "svg.html" . }}</a>
+        {{- end }}
+      </div>
+      {{- end }}
+      {{- /* 主题切换按钮。注意两点：
+             1. id 不能叫 theme-toggle —— 顶栏（被 CSS 隐藏）里已经有一个同 id
+                的按钮，主题的 footer 脚本用 getElementById("theme-toggle") 绑定，
+                只会命中顶栏那一个，这里可见的按钮就成了"点了没反应"。改为
+                ed-shell-theme-toggle，再由下面的脚本把点击代理给顶栏那个。
+             2. 不写 accesskey —— 顶栏按钮已有 accesskey="t"，Alt+T 会触发它
+                （隐藏元素同样响应），重复声明只会让两个元素抢同一个快捷键。 */ -}}
+      <button class="ed-theme-toggle" id="ed-shell-theme-toggle" title="切换主题" aria-label="切换主题">
+        {{- partial "theme_icon.html" (dict "iconIDPrefix" "shell") -}}
+      </button>
+    </div>
+  </div>
+</header>
+
+<script>
+  /* 刊头的可见按钮没有自己的状态，点击代理给顶栏那个（主题脚本绑在它身上）。 */
+  (function () {
+    var visible = document.getElementById('ed-shell-theme-toggle');
+    var host = document.getElementById('theme-toggle');
+    if (visible && host) {
+      visible.addEventListener('click', function () { host.click(); });
+    }
+  })();
+</script>

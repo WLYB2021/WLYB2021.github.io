@@ -10,7 +10,6 @@
   换成"月-日"，归档场景下日期比序号有用。
 */ -}}
 {{ define "main" }}
-{{- partial "spa_handoff.html" . -}}
 
 {{- $pages := where site.RegularPages "Type" "in" site.Params.mainSections -}}
 {{- $pages = sort $pages "Date" "desc" -}}

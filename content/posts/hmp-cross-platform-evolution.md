@@ -7,13 +7,6 @@ draft: false
 description: "HMP 个人项目的跨平台架构演进实录：从单模块 Android 到一套 Compose Multiplatform 代码跑在 Android、iOS、Desktop。"
 ---
 
-> HMP（Hearable Music Player）
->
-> 本文是《从单体到共享：应用架构演进的一条可行路径》的实践篇。论证篇讲路径的通用逻辑，本篇讲这条逻辑的一次完整落地。
-
-<!--more-->
----
-
 ## 引子
 
 HMP 是一个纯本地的音乐播放器，个人项目。起点是单模块的 Android 应用，终点是一套 Compose Multiplatform 代码同时跑在 Android、iOS、Desktop 上。

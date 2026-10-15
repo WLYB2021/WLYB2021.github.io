@@ -87,7 +87,9 @@ ShowWordCount = true
 ShowToc = true
 TocOpen = false
 ShowPostNavLinks = true
-ShowBreadCrumbs = true
+# 文章页不渲染面包屑：自建 post_header.html 已刻意移除它（全站都是文章，
+# 顶部导航也已提供「主页」入口）。这里关掉，避免留下主题不消费的死开关。
+ShowBreadCrumbs = false
 ShowCodeCopyButtons = true
 ShowShareButtons = true
 ShowRssButton = true
@@ -97,12 +99,26 @@ mainSections = ["posts"]
 # 文章页 meta 显示「更新于 X」（lastmod 与 date 不同天时才出现）
 showLastMod = true
 
-# ---------- 访问统计（可选） ----------
-# 接入后在站点层面即可生效；不接入时下面整段留空无副作用。
-# PaperMod 原生支持 Google Analytics：填测量 ID 并取消注释。
+# ---------- SEO / 分享卡片 ----------
+# 必须写在 [params] 直接层，不能落进下面的 [params.assets]：
+# 主题的 get-page-images 读的是 site.Params.images，写在 assets 下等于没配，
+# 表现是全站 og:image / twitter:image 缺失（分享出去只有文字没有图）。
+# 图片放 static/images/，1200×630；单篇想换图就在 front matter 加 images 或 cover.image。
+images = ["images/og-default.png"]
+# 站点主题词：主题的 head.html 会读 site.Params.keywords 输出 <meta name="keywords">，
+# 同时进 JSON-LD 的 keywords。同样必须在 [params] 直接层，写进 assets 就取不到。
+# 说明白：Google 明确不用它做排序，留着是给其他收录源和一个可读的主题声明。
+keywords = ["技术笔记", "kotlin", "kmp", "跨平台", "思考", "折腾", "独立开发"]
+
+# ---------- 搜索引擎站点验证（不是访问统计，别搞混） ----------
+# 注意：PaperMod 的 [params.analytics.*] 只输出「验证 meta 标签」，与流量统计无关。
+# 之前这里写成"填测量 ID 即可接入 Google Analytics"是错的 —— 填 G-XXXXXXX 进去
+# 只会生成一段没人读的 <meta name="google-site-verification">，一条数据都不会有。
+# 主题对统计零支持，真接统计要写在 layouts/partials/extend_head.html（已建好接入点，
+# 内含各方案的脚本示例与"SPA 切换需手动上报"的提醒）。
+# 下面这段仅在你想用 Search Console 的 HTML 标记验证时打开，填它的验证串：
 # [params.analytics.google]
-# SiteVerificationTag = "G-XXXXXXX"
-# 另可选自托管 Umami/Plausible：本主题未内置，需在 extend_head.html 自行加 <script>。
+# SiteVerificationTag = "验证串（不是 G-XXXXXXXXXX）"
 
 # ---------- 站点图标 ----------
 # favicon 用 SVG；PaperMod 的 <link> 硬编码 type="image/png"，因此另备
@@ -112,19 +128,20 @@ showLastMod = true
 favicon = "favicon.svg"
 favicon16x16 = "favicon-16x16.png"
 favicon32x32 = "favicon-32x32.png"
-
-# ---------- SEO / 分享卡片 ----------
-# keywords 用英文逗号分隔；填 5~10 个你真正在写的主题词
-keywords = ["技术笔记", "kotlin", "kmp", "跨平台", "思考", "折腾", "独立开发"]
-# 站点默认分享图（放static/images/og-default.png，建议 1200×630）
-images = ["images/og-default.png"]
-# 主页与各页面是否输出 canonical / OG 元信息（PaperMod 默认开启）
+# 注意：images / keywords 不在这里，它们在上面的 [params] 直接层
+# （主题只读 site.Params.images）。
 
 # ---------- 首页（由 layouts/index.html 自建模板读取，主题不感知这些键） ----------
 [params.home]
 postsHeading = "最新文章"
-# 首页最多展示几篇文章；0 = 全部
-postsLimit = 5
+# 首页展示几篇：第一篇固定取最新，其余从剩余文章里随机抽（0 = 全部，不抽）。
+# 首页因此是并排卡片（宽屏两列），见 layouts/index.html 与 custom.css 的 .ed-cards--pair。
+postsLimit = 2
+# 除最新一篇之外是否随机：
+#   true  → 构建时用 shuffle 抽（页面仍是静态 HTML，可被收录、无闪烁；
+#           每次部署会重新抽一遍，所以你发新文章时首页的"随机位"会换）
+#   false → 按时间顺序取最新的前 N 篇
+randomRest = true
 # 卡片是否显示日期 / 阅读时长（post_meta partial）
 showMeta = true
 
@@ -132,13 +149,13 @@ showMeta = true
 [params.profile]
 title = "Xi"
 subtitle = "Writing what's worth keeping."
-# 刊名下的第二段自我介绍
-desc = "No fixed theme, no persona. Just notes worth keeping — a detour, an idea, or the clarity that comes after a mistake."
-# 头像：把图片放到 static/images/ 后填路径，如 "images/avatar.jpg"；留空不显示
-imageUrl = ""
-imageTitle = "Xi"
-imageWidth = 150
-imageHeight = 150
+# 刊名下原本还有第二段自我介绍（params.profile.desc），已按要求去掉；
+# 模板用 {{ with $profile.desc }} 包裹，键不存在就不渲染，custom.css 里
+# .ed-masthead-desc 那两条规则暂时闲置，将来想加回一段话直接写这个键即可。
+# 头像键（imageUrl / imageTitle / imageWidth / imageHeight）已删：那四个键
+# 面向的是主题自带的 home_info.html，而本站首页模板早就覆盖了它，全站没有任何
+# 模板读它们 —— 属于填了也不生效的死配置。要做头像得先在 partials/ed_masthead.html
+# 里加 <img> 与样式，再把键加回来（外壳统一后，改这一处 6 个外壳页同时生效）。
 
 # ---------- 联系方式 ----------
 # 邮箱只填这一处，社交图标会自动引用，改地址不用改两遍
@@ -165,6 +182,13 @@ name = "RSS"
 url = "/index.xml"
 icon = "rss"
 weight = 3
+
+# ---------- 结构化数据（JSON-LD） ----------
+# 主题的 schema_json.html 只认 params.schema.sameAs，回退才读 params.SocialIcons；
+# 本站社交图标写在 [[params.social]] 下（由自建首页消费），所以这里要再声明一遍，
+# 否则线上 JSON-LD 的 sameAs 是空数组，搜索引擎拿不到你的站外身份。
+[params.schema]
+sameAs = ["https://github.com/WLYB2021"]
 
 # ---------- 底部版权 ----------
 # 主题 footer.html 只认三个键：footer.hideCopyright（隐藏 © 行）、
