@@ -8,7 +8,7 @@ tags:
   - "跨平台"
   - "架构"
   - "个人项目"
-draft: false
+draft: true
 description: "HMP 个人项目的跨平台架构演进实录：从单模块 Android 到一套 Compose Multiplatform 代码跑在 Android、iOS、Desktop。"
 model: "DeepSeek 4.1 Flash"
 tool: "WorkBuddy"
@@ -18,9 +18,9 @@ tool: "WorkBuddy"
 
 HMP 是一个纯本地的音乐播放器，个人项目。起点是单模块的 Android 应用，终点是一套 Compose Multiplatform 代码同时跑在 Android、iOS、Desktop 上。
 
-它走完了论证篇描述的三个阶段：**单体 → 模块 → 共享**。共享阶段内部又分两步，先共享逻辑层，再共享 UI 层。下面按这个顺序展开，每一步都给出仓库里的出处。
+它走完了[论证篇](/posts/from-monolith-to-shared/)描述的三个阶段：单体 → 模块 → 共享。共享阶段内部又分两步，先共享逻辑层，再共享 UI 层。下面按这个顺序展开，每一步都给出仓库里的出处。
 
----
+![六个落点，共享边界一路外移](/images/hmp/01-timeline.svg)
 
 ## 一、单体
 
@@ -39,30 +39,24 @@ HMP 是一个纯本地的音乐播放器，个人项目。起点是单模块的 
 
 **单端、单模块、不共享。** 这个形态下，播放逻辑和界面生命绑在一起，依赖靠工厂手写。功能能加，但每加一处都要动同一批文件。
 
----
-
 ### 1.2 基础改造：引入 DI 与播放收口
 
-先是两处基础改造。**把播放能力收口**：播放控制从旧方案迁到 Media3 的 `MediaSession`，把原先散在 UI 里的播放逻辑收进一个播放服务。**引入 Hilt**：`MusicApplication` 加 `@HiltAndroidApp`，ViewModel 加 `@HiltViewModel`，数据库与网络初始化迁到 Hilt Module，手写的 `ViewModelFactory` 退役。
+先是两处基础改造。把播放能力收口：播放控制从旧方案迁到 [Media3](https://developer.android.com/jetpack/androidx/releases/media3) 的 `MediaSession`，把原先散在 UI 里的播放逻辑收进一个播放服务。引入 Hilt：`MusicApplication` 加 `@HiltAndroidApp`，ViewModel 加 `@HiltViewModel`，数据库与网络初始化迁到 Hilt Module，手写的 `ViewModelFactory` 退役。
 
 动机写在提交信息里：可测试性与可维护性。
 
 #### 1.2.1 这两步后来各自被用上了一次
 
-- DI 让 ViewModel 可被外部装配。后来从 Hilt 换 Koin 时，换的是装配器，装配方式没动。
+- DI 让 ViewModel 可被外部装配。后来从 Hilt 换 [Koin](https://insert-koin.io/docs/reference/koin-core/kmp-setup) 时，换的是装配器，装配方式没动。
 - Media3 把播放能力收进一个服务，后来被 `PlaybackController` 接口整个包住。
 
 这两步只解决了单模块内部的耦合。模块之间仍然没有边界——`core-domain` 这类东西还不存在，数据、播放、界面全在一个构建单元里。
 
----
-
 ## 二、模块
-
-### 2.1 模块化：拆出五个模块
 
 上一章的两处收口发生在模块内部，模块之间还没有边界。这一次划分把边界显式化：先规划拆分方案，再执行迁移，最后收口。
 
-#### 2.1.1 拆成了什么
+### 2.1 拆成了什么
 
 从单模块拆成五个：
 
@@ -74,25 +68,23 @@ include(":core-player")   // Media3、播放服务
 include(":feature-ui")    // Compose 页面与组件
 ```
 
-**这是第二阶段：单端、多模块、依赖方向显式。**
+这是第二阶段：单端、多模块、依赖方向显式。
 
-#### 2.1.2 原始动机
+### 2.2 原始动机
 
 当时留下的改进路线文档写得很清楚，动机是三条：降低耦合、提升编译速度、明确模块边界。
 
-#### 2.1.3 `feature-ui` 被单独拆了出来
+### 2.3 `feature-ui` 被单独拆了出来
 
 这次划分里，`feature-ui` 是一个独立模块。
 
 动机写在同一份文档里，属于"分层更干净"的一部分——UI 归 UI，数据归数据。后来共享 UI 时，它是唯一有资格被整体上提的候选：代码已隔离、依赖已单向、编译已独立，只差搬走。
 
-#### 2.1.4 划分之后，架构停在这里
+### 2.4 划分之后，架构停在这里
 
 功能继续增长：v5.2 ~ v5.9 加了触觉反馈、动态主题、音效、歌词、播放列表管理；域模型重构并接入 Hilt 导航组件；数据库版本升级与音乐额外信息表迁移；迁到 Navigation 3 和 Gradle 9.0。
 
 这一长段里没有提交触碰过模块划分。模块边界一直在那里，但用它的理由还没出现——直到项目决定增加第二个端。
-
----
 
 ## 三、共享
 
@@ -112,6 +104,8 @@ include(":feature-ui")    // Compose 页面与组件
 
 #### 3.1.2 技术选型映射
 
+**表 1**　技术选型映射
+
 | 层级 | 现有 Android | KMP 迁移后 | 说明 |
 |---|---|---|---|
 | 数据库 | Room 2.8.3 | Room KMP | `@ConstructedBy` + `BundledSQLiteDriver` |
@@ -123,13 +117,11 @@ include(":feature-ui")    // Compose 页面与组件
 | 播放引擎 | Media3 | 各自实现 | iOS 用 AVPlayer |
 | UI | Jetpack Compose | 各自实现 | iOS 用 SwiftUI |
 
-这张表是论证篇第六章"平台耦合清单"的一个具体实例，它同时给出了第三阶段的内部分界：**domain 与 data 全部可换，UI 与播放引擎保持各自实现。**
+这张表是论证篇 2.3 里"平台耦合清单"的一个具体实例，它同时给出了第三阶段的内部分界：**domain 与 data 全部可换，UI 与播放引擎保持各自实现。**
 
 #### 3.1.3 为什么选"一次性重构"
 
 文档给出的理由是 domain / data 层逻辑纯度高、平台耦合可枚举、有编译与测试作为硬反馈。三条判据只覆盖了 domain 与 data——表格最后两行不在这次搬运范围内，它们要照原样在 iOS 上各写一份。
-
----
 
 ### 3.2 共享逻辑层：下沉 domain 与 data
 
@@ -153,25 +145,23 @@ include(":feature-ui")    // Compose 页面与组件
 
 **iOS 的界面是从零重写的。** Android 有 Compose 界面，iOS 有 SwiftUI 界面——两份 UI 从这一刻开始并行维护。共享层已经就位，但共用它的界面还不存在。
 
----
-
 ### 3.3 逻辑共享的验证：桌面端与 UI 跨平台
 
 第三个端来自一次平台扩展：新模块 `desktop/app` + `desktop/core-player`。播放引擎因为桌面没有 Media3，基于 FFmpeg 子进程 + JNA 自研一套。
 
 #### 3.3.1 UI 选型
 
-**桌面端的界面用 Compose Multiplatform 写。** 这和 Android 的 Jetpack Compose 同源——同一个框架，target 从 Android 换成 JVM/Desktop。论证篇第四章的判据在这里兑现：判断"UI 能不能共享"，先做一个端比先论证有效。桌面端就是那个端。
+**桌面端的界面用 [Compose Multiplatform](https://www.jetbrains.com/lp/compose-mpp/) 写。** 这和 Android 的 Jetpack Compose 同源——同一个框架，target 从 Android 换成 JVM/Desktop。判断"UI 能不能共享"，先做一个端比先论证有效；桌面端就是那个端。
 
 同期还有一次边界试探：歌词解析器（LRC）从各端实现上提到 `shared`，Android 与 Desktop 共用。共享边界第一次越过"纯逻辑"，碰到 UI 相关的东西，没有引发问题。
 
 桌面端证明了"能共享"，但它自己也带一份独立 UI。至此三份界面并行维护，成本随功能增长。
 
----
-
 ### 3.4 共享 UI 层：迁移式提取与旧层删除
 
 Android Compose、iOS SwiftUI、Desktop Compose 三份 UI 的维护成本已经压不住，共享边界需要再往外挪一次，这次要跨过 UI。
+
+![三份并行维护的 UI，收成一套共享 UI](/images/hmp/02-three-uis-to-one.svg)
 
 #### 3.4.1 一条被作废的重写路线
 
@@ -185,11 +175,13 @@ Android Compose、iOS SwiftUI、Desktop Compose 三份 UI 的维护成本已经�
 2. **资源契约被低估**：`IconKey` / `MessageKey` 到 Compose Resources 的映射没一次做对，出现反复返工
 3. **重写不适合本仓库规模**：边搬边改两个变量叠加，冲突面与回归风险失控
 
-它和第四章的"一次性重构"用的是同一套判据——逻辑纯度、耦合可枚举、能否自动验证——结论相反：UI 层里带着行为，而行为无法用编译验证。这对应论证篇第九章开头分析的那条错误路线。
+它和论证篇 1.3.1 的"一次性重构"用的是同一套判据——逻辑纯度、耦合可枚举、能否自动验证——结论相反：UI 层里带着行为，而行为无法用编译验证。这对应论证篇 3.3 里那条被作废的路线。
 
 #### 3.4.2 定契约：先盘点，再冻结
 
 产物是一份《接口冻结 — 调用点映射表》：把旧界面里全部真实调用点盘了一遍，据此补全并冻结 `PlaybackController` 与 `PlatformServices` 两个接口。
+
+**表 2**　接口冻结时的调用点映射（节选）
 
 | 接口成员 | 调用点 |
 |---|---|
@@ -210,7 +202,7 @@ Android Compose、iOS SwiftUI、Desktop Compose 三份 UI 的维护成本已经�
 
 #### 3.4.4 v7.0 的结果
 
-```
+```text
 v7.0.0 shared-ui 跨平台架构迁移
   - 118 个 UI 文件迁移至 commonMain
   - Android/Desktop 双端共用一套 UI
@@ -223,8 +215,6 @@ v7.0.0 shared-ui 跨平台架构迁移
 
 iOS 在这一步没有跟上：它的 SwiftUI 界面还在自己维护，没用上共享层。
 
----
-
 ### 3.5 共享 UI 的收尾：iOS 全量切换
 
 `shared-ui` 增加 iOS targets；`shared-ios` 聚合框架把 `shared` + `shared-ui` 链接成单一 `sharedIos.framework` 接入 CocoaPods。这三个决策各有具体的约束来源：
@@ -235,7 +225,7 @@ iOS 在这一步没有跟上：它的 SwiftUI 界面还在自己维护，没用�
 
 地基完成后 iOS 完成切换：
 
-```
+```text
 v7.1.0 iOS 切换到共享层 Compose UI
   - iosMain 桥接层：PlaybackController 双桥 + PlatformServices
   - 删除 67 个 SwiftUI 页面 / 组件 / Swift ViewModel
@@ -267,11 +257,11 @@ v7.1.0 iOS 切换到共享层 Compose UI
 - **单源核对**：生成器产出的声明，核对真源
 - **反向核对**：确认被删的东西改造前是否真有人用——`MusicLibraryService` 这类死代码因此被正确判定为"非倒退"，没有把清理当事故
 
----
-
 ## 四、复盘
 
-### 4.1 三个阶段，两次边界移动
+走完这条路径，得到三个阶段的形态：
+
+**表 3**　三个阶段与共享边界
 
 | 阶段 | 关键动作 | 共享边界在哪 |
 |---|---|---|
@@ -282,7 +272,9 @@ v7.1.0 iOS 切换到共享层 Compose UI
 
 共享阶段内部两步之间、以及每次边界移动之间，都没有提交触碰过共享边界——架构停在原处，功能继续增长。
 
-#### 4.1.1 每一步的动机与后果
+### 4.1 每一步的动机与后果
+
+**表 4**　动机，以及它后来成了什么的前提
 
 | 动作 | 动机 | 后来成为什么的前提 |
 |---|---|---|
@@ -293,10 +285,25 @@ v7.1.0 iOS 切换到共享层 Compose UI
 
 三个阶段没有一份总规划文档串起来，每一步的动机都是当时的具体压力。但它们叠起来，恰好是共享边界逐段移动的一条完整路径。
 
-#### 4.1.2 留下的资产
+### 4.2 留下的资产
 
 - **迁移方案文档**：模块化方案、共享 UI 提取方案（含被作废的重写路线）
 - **设计文档**：iOS 适配设计、接口冻结映射表
 - **审查报告**：能力搬迁点检、架构审查
 
-这批文档对应论证篇第十章那句"架构资产不只包括代码，也包括决策的来路"。
+## 结语
+
+这批文档对应论证篇「复盘」那句"架构资产不只包括代码，也包括决策的来路"。
+
+## 参考
+
+文中涉及的库与框架，其跨平台支持现状以下列官方文档为准（访问日期均为 2026-10-16）：
+
+1. [Compose Multiplatform](https://www.jetbrains.com/lp/compose-mpp/) — JetBrains
+2. [Kotlin Multiplatform FAQ](https://jetbrains.com/help/kotlin-multiplatform-dev/faq.html) — JetBrains（各平台 Stable / Beta 状态）
+3. [Expected and actual declarations](https://kotlinlang.org/docs/multiplatform/multiplatform-expect-actual.html) — Kotlin 文档
+4. [Set up Room database for KMP](https://developer.android.com/kotlin/multiplatform/room) — Android Developers
+5. [Set up DataStore for KMP](https://developer.android.com/kotlin/multiplatform/datastore) — Android Developers
+6. [Client engines](https://ktor.io/docs/client-engines.html) — Ktor 文档
+7. [Kotlin Multiplatform Setup](https://insert-koin.io/docs/reference/koin-core/kmp-setup) — Koin 文档
+8. [Media3](https://developer.android.com/jetpack/androidx/releases/media3) — Android Developers

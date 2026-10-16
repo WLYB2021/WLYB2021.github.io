@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 286" width="760" height="286" role="img" aria-label="入向链路四步齐备，出向链路一步没有">
+  <rect x="0.5" y="0.5" width="759" height="285" rx="10" fill="#fbfaf8" stroke="#e8e4de"/>
+  <defs>
+    <marker id="owArw" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0 0 L9 4.5 L0 9 z" fill="#b03a2e"/>
+    </marker>
+    <marker id="owArwG" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0 0 L9 4.5 L0 9 z" fill="#a9a29a"/>
+    </marker>
+  </defs>
+  <g font-family="-apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif">
+    <text x="24" y="34" font-size="13" font-weight="600" fill="#8a857e" letter-spacing=".06em">图 1</text>
+    <text x="64" y="34" font-size="13" fill="#8a857e" letter-spacing=".02em">入向四步齐备，出向一步没有</text>
+
+    <!-- 入向 -->
+    <text x="24" y="98" font-size="13" font-weight="700" fill="#2b2b2b">入向</text>
+    <text x="24" y="118" font-size="11" fill="#8a857e">已做完</text>
+    <g fill="#ffffff" stroke="#b03a2e" stroke-width="1.2">
+      <rect x="130" y="64" width="132" height="56" rx="8"/>
+      <rect x="284" y="64" width="132" height="56" rx="8"/>
+      <rect x="438" y="64" width="132" height="56" rx="8"/>
+      <rect x="592" y="64" width="132" height="56" rx="8"/>
+    </g>
+    <g font-size="12.5" fill="#2b2b2b" text-anchor="middle">
+      <text x="196" y="90">应用声明能力</text>
+      <text x="196" y="108">AppFunctions</text>
+      <text x="350" y="97">系统建立索引</text>
+      <text x="504" y="97">agent 发现</text>
+      <text x="658" y="97">agent 执行调用</text>
+    </g>
+    <g stroke="#b03a2e" stroke-width="1.5" fill="none">
+      <path d="M264 92 H280" marker-end="url(#owArw)"/>
+      <path d="M418 92 H434" marker-end="url(#owArw)"/>
+      <path d="M572 92 H588" marker-end="url(#owArw)"/>
+    </g>
+
+    <!-- 出向 -->
+    <text x="24" y="196" font-size="13" font-weight="700" fill="#2b2b2b">出向</text>
+    <text x="24" y="216" font-size="11" fill="#8a857e">空缺</text>
+    <rect x="130" y="162" width="140" height="56" rx="8" fill="#ffffff" stroke="#ddd7cf"/>
+    <text x="200" y="195" font-size="12.5" fill="#2b2b2b" text-anchor="middle">应用提交任务</text>
+    <rect x="290" y="162" width="260" height="56" rx="8" fill="#f4f2ee" stroke="#c9c3ba" stroke-dasharray="5 4"/>
+    <text x="420" y="186" font-size="12.5" fill="#8a857e" text-anchor="middle">缺的是整套 infra</text>
+    <text x="420" y="206" font-size="11" fill="#a9a29a" text-anchor="middle">任务接收面 · 编排 · 回转 · 落账 · 撤销</text>
+    <rect x="570" y="162" width="154" height="56" rx="8" fill="#ffffff" stroke="#ddd7cf"/>
+    <text x="647" y="195" font-size="12.5" fill="#2b2b2b" text-anchor="middle">agent 回传结果</text>
+    <g stroke="#a9a29a" stroke-width="1.5" fill="none" stroke-dasharray="5 4">
+      <path d="M272 190 H286" marker-end="url(#owArwG)"/>
+      <path d="M552 190 H566" marker-end="url(#owArwG)"/>
+    </g>
+
+    <line x1="24" y1="244" x2="736" y2="244" stroke="#e8e4de"/>
+    <text x="24" y="268" font-size="13" fill="#2b2b2b">加一个委派方法就能补上 API 的对称；</text>
+    <text x="24" y="268" font-size="13" font-weight="700" fill="#b03a2e" dx="236">补不上的是 API 背后的机制。</text>
+  </g>
+</svg>

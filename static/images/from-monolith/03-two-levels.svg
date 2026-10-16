@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 350" width="760" height="350" role="img" aria-label="两种共享程度的对比：逻辑同源与全栈同源">
+  <rect x="0.5" y="0.5" width="759" height="349" rx="10" fill="#fbfaf8" stroke="#e8e4de"/>
+  <g font-family="-apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif">
+    <text x="24" y="34" font-size="13" font-weight="600" fill="#8a857e" letter-spacing=".06em">图 3</text>
+    <text x="64" y="34" font-size="13" fill="#8a857e" letter-spacing=".02em">「共享」有两种程度：逻辑同源　与　全栈同源</text>
+
+    <!-- 逻辑同源 -->
+    <text x="24" y="102" font-size="15" font-weight="700" fill="#2b2b2b">逻辑同源</text>
+    <text x="24" y="124" font-size="12" fill="#8a857e">UI 代码：N 份</text>
+    <rect x="130" y="84" width="200" height="72" rx="8" fill="#f7e9e6" stroke="#b03a2e" stroke-width="1.3"/>
+    <text x="230" y="126" font-size="13" fill="#8c2f25" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">domain + data</text>
+    <g fill="#ffffff" stroke="#ddd7cf">
+      <rect x="350" y="84" width="120" height="72" rx="8"/>
+      <rect x="482" y="84" width="120" height="72" rx="8"/>
+      <rect x="614" y="84" width="106" height="72" rx="8"/>
+    </g>
+    <g font-size="13" fill="#4a4741" text-anchor="middle">
+      <text x="410" y="126">Android UI</text>
+      <text x="542" y="126">iOS UI</text>
+      <text x="667" y="126">Desktop UI</text>
+    </g>
+
+    <!-- 全栈同源 -->
+    <text x="24" y="234" font-size="15" font-weight="700" fill="#2b2b2b">全栈同源</text>
+    <text x="24" y="256" font-size="12" fill="#8a857e">UI 代码：1 份</text>
+    <rect x="130" y="216" width="330" height="72" rx="8" fill="#f7e9e6" stroke="#b03a2e" stroke-width="1.3"/>
+    <text x="295" y="258" font-size="13" fill="#8c2f25" text-anchor="middle" font-family="ui-monospace, Consolas, monospace">domain + data + UI + ViewModel</text>
+    <g fill="#ffffff" stroke="#ddd7cf">
+      <rect x="480" y="216" width="110" height="72" rx="8"/>
+      <rect x="602" y="216" width="118" height="72" rx="8"/>
+    </g>
+    <g font-size="13" fill="#4a4741" text-anchor="middle">
+      <text x="535" y="258">播放引擎</text>
+      <text x="661" y="258">平台能力</text>
+    </g>
+
+    <!-- 图例 -->
+    <line x1="24" y1="308" x2="736" y2="308" stroke="#e8e4de"/>
+    <rect x="24" y="322" width="14" height="12" rx="3" fill="#f7e9e6" stroke="#b03a2e" stroke-width="1.2"/>
+    <text x="46" y="333" font-size="12.5" fill="#6f6b66">共享，全端一份</text>
+    <rect x="176" y="322" width="14" height="12" rx="3" fill="#ffffff" stroke="#ddd7cf"/>
+    <text x="198" y="333" font-size="12.5" fill="#6f6b66">各端自实现</text>
+  </g>
+</svg>

@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 312" width="760" height="312" role="img" aria-label="一次任务执行链路：上下文 infra 在上，治理 infra 在下，中间是五跳参与方">
+  <rect x="0.5" y="0.5" width="759" height="311" rx="10" fill="#fbfaf8" stroke="#e8e4de"/>
+  <defs>
+    <marker id="ow2Arw" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0 0 L9 4.5 L0 9 z" fill="#b03a2e"/>
+    </marker>
+    <marker id="ow2ArwG" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0 0 L9 4.5 L0 9 z" fill="#a9a29a"/>
+    </marker>
+  </defs>
+  <g font-family="-apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif">
+    <text x="24" y="34" font-size="13" font-weight="600" fill="#8a857e" letter-spacing=".06em">图 2</text>
+    <text x="64" y="34" font-size="13" fill="#8a857e" letter-spacing=".02em">一次任务执行链路：上下文在上，治理在下</text>
+
+    <!-- 上下文 infra -->
+    <rect x="120" y="56" width="520" height="44" rx="8" fill="#fdf4f2" stroke="#b03a2e" stroke-width="1.2"/>
+    <text x="380" y="83" font-size="12.5" fill="#8c2f25" text-anchor="middle">上下文 infra：订阅感知事件 · 更新上下文 · 影响后续步骤的路由与组装</text>
+    <g stroke="#a9a29a" stroke-width="1.3" fill="none" stroke-dasharray="4 3">
+      <path d="M195 100 V118" marker-end="url(#ow2ArwG)"/>
+      <path d="M433 100 V118" marker-end="url(#ow2ArwG)"/>
+      <path d="M671 100 V118" marker-end="url(#ow2ArwG)"/>
+    </g>
+
+    <!-- 主链路 -->
+    <g>
+      <rect x="24"  y="122" width="104" height="58" rx="8" fill="#ffffff" stroke="#ddd7cf"/>
+      <rect x="143" y="122" width="104" height="58" rx="8" fill="#ffffff" stroke="#b03a2e" stroke-width="1.2"/>
+      <rect x="262" y="122" width="104" height="58" rx="8" fill="#ffffff" stroke="#b03a2e" stroke-width="1.2"/>
+      <rect x="381" y="122" width="104" height="58" rx="8" fill="#ffffff" stroke="#b03a2e" stroke-width="1.2"/>
+      <rect x="500" y="122" width="104" height="58" rx="8" fill="#ffffff" stroke="#ddd7cf"/>
+      <rect x="619" y="122" width="104" height="58" rx="8" fill="#ffffff" stroke="#ddd7cf"/>
+    </g>
+    <g font-size="11.5" fill="#2b2b2b" text-anchor="middle">
+      <text x="76"  y="157">用户</text>
+      <text x="195" y="157">助手 Agent</text>
+      <text x="314" y="157">任务管理 Agent</text>
+      <text x="433" y="157">通用 Agent 池</text>
+      <text x="552" y="157">应用能力</text>
+      <text x="671" y="157">回传与审计</text>
+    </g>
+    <g stroke="#b03a2e" stroke-width="1.5" fill="none">
+      <path d="M130 151 H139" marker-end="url(#ow2Arw)"/>
+      <path d="M249 151 H258" marker-end="url(#ow2Arw)"/>
+      <path d="M368 151 H377" marker-end="url(#ow2Arw)"/>
+      <path d="M487 151 H497" marker-end="url(#ow2Arw)"/>
+      <path d="M606 151 H615" marker-end="url(#ow2Arw)"/>
+    </g>
+
+    <!-- 治理 infra -->
+    <g stroke="#a9a29a" stroke-width="1.3" fill="none" stroke-dasharray="4 3">
+      <path d="M195 182 V200" marker-end="url(#ow2ArwG)"/>
+      <path d="M433 182 V200" marker-end="url(#ow2ArwG)"/>
+      <path d="M671 182 V200" marker-end="url(#ow2ArwG)"/>
+    </g>
+    <rect x="120" y="204" width="520" height="44" rx="8" fill="#fdf4f2" stroke="#b03a2e" stroke-width="1.2"/>
+    <text x="380" y="231" font-size="12.5" fill="#8c2f25" text-anchor="middle">治理 infra：能力边界检查 · 参数校验 · 授权裁决 · 审计归因</text>
+
+    <line x1="24" y1="268" x2="736" y2="268" stroke="#e8e4de"/>
+    <text x="24" y="292" font-size="12.5" fill="#2b2b2b">每一步分派时重新打包意图、上下文、授权凭证与推理预算；</text>
+    <text x="24" y="292" font-size="12.5" font-weight="700" fill="#b03a2e" dx="350">执行槽只执行当前这一步，不持有跨步骤状态。</text>
+  </g>
+</svg>
