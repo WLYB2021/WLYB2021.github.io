@@ -56,9 +56,11 @@ description: "一句话摘要"
 
 草稿 → 预览 → 定稿 → 校验 → 发布 的固定步骤，以及发布前要过的标准清单，见 [docs/publishing.md](docs/publishing.md)。
 
+正文的空行规则与间距约定见 [docs/typography.md](docs/typography.md)；写完用 `python scripts/lint-prose.py` 自检（CI 也会跑同一支脚本）。
+
 ## 部署
 
-push 到 `main` 即自动构建发布。CI 会校验构建产物（index.html / 404.html / sitemap / RSS / OG 图），缺件即失败。
+push 到 `main` 即自动构建发布。CI 先跑正文排版校验（`scripts/lint-prose.py`），再校验构建产物（index.html / 404.html / sitemap / RSS / OG 图），任一不过即失败。
 
 ## 维护手册
 

@@ -25,6 +25,7 @@ Windows 的 Git Bash 默认不带 `make`，所以两种写法都列出：
 | 只看已发布的样子 | — | `hugo server` |
 | 列出所有草稿 | `make drafts` | `hugo list drafts` |
 | 本地构建自检 | `make build` | `hugo --minify --gc` |
+| 校验正文排版 | `make lint` | `python scripts/lint-prose.py` |
 
 > 预览必须带 `-D`（`scripts/dev.sh` 已内置）。
 > 少了它，`draft: true` 的文章在本地也是 404 —— 写作期反而看不见自己写的东西。
@@ -36,7 +37,7 @@ Windows 的 Git Bash 默认不带 `make`，所以两种写法都列出：
 | ① 起草 | `hugo new posts/xxx.md`，archetype 生成骨架（默认 `draft: true`） | 骨架就位 |
 | ② 预览 | `hugo server -D` 本地实时看渲染 | 页面对得上预期 |
 | ③ 定稿 | 内容与呈现双向精修 | 过「发布标准清单」 |
-| ④ 校验 | 本地 `hugo --minify --gc` 构建，确认无 error | 产物正常 |
+| ④ 校验 | `python scripts/lint-prose.py` 查排版，再 `hugo --minify --gc` 构建 | 排版通过 + 产物正常 |
 | ⑤ 发布 | 翻 `draft: false` → 一篇一提交 → push | CI 绿 + 线上 URL 200 |
 
 ## 发布标准清单
@@ -53,6 +54,8 @@ Windows 的 Git Bash 默认不带 `make`，所以两种写法都列出：
 **格式**
 
 - [ ] front matter 的顺序、引号、`tags` 写法符合 [maintenance.md](maintenance.md) 的「字段顺序与写法」
+- [ ] 排版通过 `python scripts/lint-prose.py`（空行 / 行尾空格 / 围栏规则见 [typography.md](typography.md)）
+- [ ] 标题编号符合统一体系（`h2` = `一、`，`h3` = `1.1`，`h4` = `1.1.1`；`引子`/`结语` 不编号）
 
 **呈现**
 

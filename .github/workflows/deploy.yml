@@ -30,6 +30,11 @@ jobs:
           # fetch-depth: 0 拉全量历史 —— enableGitInfo 依赖它计算 lastmod
           fetch-depth: 0
 
+      # 正文排版校验（空行 / 行尾空格 / 围栏）——规则见 docs/typography.md。
+      # 很轻的前置检查，早失败省掉后面的主题克隆与构建。不需要这道门就删掉此步。
+      - name: Lint prose
+        run: python3 scripts/lint-prose.py
+
       # 主题被 .gitignore 排除（不占用仓库体积），需在 CI 单独拉取；
       # 缓存命中时跳过 clone，patch-theme.sh 幂等、可安全重跑
       - name: Cache theme
