@@ -66,11 +66,13 @@
           <span class="ed-card-num">{{ printf "%02d" (index $issueNo $p.RelPermalink) }}</span>
           <div class="ed-card-body">
             <h2 class="ed-card-title">{{ $p.Title }}</h2>
-            {{- with $p.Description }}
-            <p class="ed-card-desc">{{ . | plainify | htmlUnescape }}</p>
-            {{- else }}
-            <p class="ed-card-desc">{{ $p.Summary | plainify | htmlUnescape | truncate 120 }}</p>
-            {{- end }}
+            <div class="ed-card-desc">
+              {{- with $p.Description }}
+              <p>{{ . | plainify | htmlUnescape }}</p>
+              {{- else }}
+              <p>{{ $p.Summary | plainify | htmlUnescape | truncate 120 }}</p>
+              {{- end }}
+            </div>
             {{- if $showMeta }}
             <div class="ed-card-meta">{{- partial "post_meta.html" $p -}}</div>
             {{- end }}

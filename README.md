@@ -22,7 +22,7 @@
 make serve
 ```
 
-自动完成克隆主题、打兼容补丁、启动 `http://localhost:1313`。手动方式见 [docs/maintenance.md](docs/maintenance.md)。
+自动完成克隆主题、打兼容补丁、启动 `http://localhost:1313`（含草稿）。Windows 的 Git Bash 默认不带 `make`，直接跑 `./scripts/dev.sh` 等效。手动方式见 [docs/maintenance.md](docs/maintenance.md)。
 
 ## 写文章
 
@@ -42,13 +42,19 @@ front matter 示例：
 ```yaml
 ---
 title: "文章标题"
-date: 2026-10-08T10:00:00+08:00
-draft: false
 slug: "url-slug"
-tags: ["KMP", "架构"]
+date: 2026-10-08T10:00:00+08:00
+tags:
+  - "KMP"
+  - "架构"
+draft: false
 description: "一句话摘要"
 ---
 ```
+
+## 发布流程
+
+草稿 → 预览 → 定稿 → 校验 → 发布 的固定步骤，以及发布前要过的标准清单，见 [docs/publishing.md](docs/publishing.md)。
 
 ## 部署
 

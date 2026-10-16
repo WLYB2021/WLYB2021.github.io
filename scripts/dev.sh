@@ -27,5 +27,8 @@ echo "==> 应用主题兼容性补丁（幂等）"
 chmod +x scripts/patch-theme.sh
 ./scripts/patch-theme.sh themes/PaperMod
 
-echo "==> 启动本地预览：http://localhost:1313"
-exec hugo server --bind 127.0.0.1 --port 1313
+# -D 让草稿（front matter 里 draft: true）也参与渲染。
+# 少了它，hugo new 建出来的新文章在本地点开是 404 —— 写作期反而看不到自己写的东西。
+# 只想看"线上已发布的样子"时，手动跑不带 -D 的 hugo server 即可。
+echo "==> 启动本地预览（含草稿）：http://localhost:1313"
+exec hugo server --bind 127.0.0.1 --port 1313 -D

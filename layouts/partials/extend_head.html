@@ -36,3 +36,44 @@
   以后要加别的第三方资源（字体、评论、埋点），也写在这个文件里。
 */ -}}
 {{- /* ===== 接入区：把统计脚本贴在这里 ===== */ -}}
+
+{{- /* ===== 阅读偏好：尽早应用 =====
+     与 partials/reading_settings.html 的 applyPrefs() 是同一套映射。
+     那边负责面板交互，这边只负责"在 head 里就把已存偏好写上 :root"，
+     避免刷新时先按默认字号/行高渲染、再跳一下。 ===== */ -}}
+<script>
+  (function () {
+    try {
+      var p = JSON.parse(localStorage.getItem('ed-reading-prefs') || '{}');
+      var r = document.documentElement;
+      var spec = {
+        size:     ['--ed-read-size', 'px'],
+        leading:  ['--ed-read-leading', ''],
+        tracking: ['--ed-read-tracking', 'em'],
+        weight:   ['--ed-read-weight', ''],
+        indent:   ['--ed-read-indent', 'em'],
+        para:     ['--ed-read-para', 'em'],
+        align:     ['--ed-read-align', ''],
+        measure:   ['--ed-measure', 'px'],
+        container: ['--ed-container-w', 'px'],
+        code:      ['--ed-read-code', '']
+      };
+      /* 字体：西文栈 + 中文栈 + 通用兜底，与 reading_settings.html 的 composeFont() 一致 */
+      var parts = [];
+      if (p.west) parts.push(p.west);
+      if (p.cjk) parts.push(p.cjk);
+      if (parts.length) r.style.setProperty('--ed-read-font', parts.join(', ') + ', sans-serif');
+      else if (p.font) {
+        /* 兼容更早版本：那时存的是 'sans' / 'serif' 两个标识 */
+        r.style.setProperty('--ed-read-font', p.font === 'serif' ? 'var(--ed-serif)' : 'var(--ed-sans)');
+      }
+      for (var k in spec) {
+        if (p[k] !== undefined && p[k] !== null && p[k] !== '') {
+          r.style.setProperty(spec[k][0], p[k] + spec[k][1]);
+        }
+      }
+      /* 行宽（--ed-measure）与版心（--ed-container-w）是两个独立的量，
+         都在上面的 spec 循环里写入，这里不需要额外联动。 */
+    } catch (e) {}
+  })();
+</script>

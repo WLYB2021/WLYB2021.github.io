@@ -38,11 +38,13 @@
       <span class="ed-card-num ed-card-num--date">{{ .Date | time.Format "01-02" }}</span>
       <div class="ed-card-body">
         <h2 class="ed-card-title">{{ .Title }}</h2>
-        {{- with .Description }}
-        <p class="ed-card-desc">{{ . | plainify | htmlUnescape }}</p>
-        {{- else }}
-        <p class="ed-card-desc">{{ .Summary | plainify | htmlUnescape | truncate 120 }}</p>
-        {{- end }}
+        <div class="ed-card-desc">
+          {{- with .Description }}
+          <p>{{ . | plainify | htmlUnescape }}</p>
+          {{- else }}
+          <p>{{ .Summary | plainify | htmlUnescape | truncate 120 }}</p>
+          {{- end }}
+        </div>
         <div class="ed-card-meta">{{- partial "post_meta.html" . -}}</div>
       </div>
     </article>

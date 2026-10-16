@@ -47,6 +47,19 @@
 
   --ed-measure: 760px;
   --ed-measure-max: 900px;
+  /* ---------- 阅读偏好（文章页右下角设置面板可调） ----------
+     面板见 layouts/partials/reading_settings.html；这几个变量被 .post-content
+     消费，--ed-measure 同时就是正文行宽。用户调整后由脚本写成 :root 的内联
+     变量（内联优先级最高，能盖过 media query 里 --ed-measure 的 clamp）。 */
+  --ed-read-font: var(--ed-sans);   /* 正文字体：西文栈 + 中文栈（由脚本拼接） */
+  --ed-read-code: var(--code-font); /* 代码字体：默认 = 等宽栈（面板「代码」下拉可换） */
+  --ed-read-size: 16px;             /* 正文字号 */
+  --ed-read-leading: 1.75;          /* 正文行高 */
+  --ed-read-tracking: .01em;        /* 字间距 */
+  --ed-read-weight: 400;            /* 字重 */
+  --ed-read-indent: 0em;            /* 段首缩进 */
+  --ed-read-align: left;            /* 段落对齐：left / justify */
+  --ed-read-para: .95em;            /* 段落间距 */
   --ed-wide: 1080px;        /* 宽屏断点：以下=单栏，以上=分栏 */
   --ed-col-gap: 64px;       /* 目录列 → 正文列 的净间距 */
   --ed-gutter: 40px;        /* 宽屏容器左右内边距（文章页 / 首页 / 列表页共用） */
@@ -136,13 +149,30 @@
    ============================================================ */
 @media (min-width: 1080px) {
 
-  /* 让正文行宽随视口线性放宽：1080px 时 ≈ 760px，1920px 时封顶 900px。
-     只在这条 media query 内覆盖 --ed-measure，因此窄屏（<1080px）
-     仍严格沿用 760px 单栏观感，不受影响。
-     由于 --ed-measure 同时被容器 max-width、文字块 max-width、
-     悬浮块 width 引用，一处改动三处同步生效。 */
+  /* ---------- 宽屏（PC 横屏）的阅读默认：书籍式中文排版 ----------
+     首行缩进两格 + 两端对齐 + 段距收紧到 .6em（用缩进替代段间距），
+     行宽 960、版心 1440 —— 这一套是自洽的中文书籍排版，跟站点标题的
+     编辑杂志风呼应。
+
+     **只写在 ≥1080px 这条 media query 里，不写进基础 :root。**
+     窄屏若继承「两端对齐 + 2em 缩进 + 960 行宽」，短行会被两端对齐
+     拉散字距，很不好看；窄屏仍走 :root 的基础默认（无缩进、左对齐、
+     行宽 760）。
+
+     与「阅读设置」面板的关系：用户一旦手动调过，脚本写在 :root 上的
+     内联变量会盖过这里；点「恢复默认」= 移除内联 → 正好落回这套宽屏默认。
+     （面板回填初值时读的就是 :root 的计算值，所以宽屏/窄屏各自显示得对。）
+
+     注意：--ed-measure 不再是随视口变化的 clamp()，而是固定 960px ——
+     与面板「行宽」写的是同一个量（面板写的是固定值），语义保持一致；
+     容器上限改由 --ed-container-w 独立给出（面板「版心」）。 */
   :root {
-    --ed-measure: clamp(760px, calc(700px + 10.4vw), 900px);
+    --ed-read-tracking: .02em;
+    --ed-read-para: .6em;
+    --ed-read-indent: 2em;
+    --ed-read-align: justify;
+    --ed-measure: 960px;
+    --ed-container-w: 1440px;
   }
 
   /* ---------- 容器与两栏网格 ---------- */
@@ -157,9 +187,12 @@
      表现为留白从 70 突然跳到 104。固定上限没有这个突变，
      留白随视口线性增长，且 1600 之上不再继续膨胀。 */
   .ed-single .ed-shell {
-    max-width: calc(
+    /* 容器宽度：默认 = 行宽上限 + 列间距 + 目录列 + 两侧内边距。
+       --ed-container-w 由设置面板的「版心」覆写 —— 于是"整体多宽"与
+       "正文多宽"是两个独立的量：调行宽只动正文，调版心只动外层。 */
+    max-width: var(--ed-container-w, calc(
       var(--ed-measure-max) + var(--ed-col-gap) + var(--ed-rail-w) + 2 * var(--ed-gutter)
-    );
+    ));
     width: 100%;
     margin: 0 auto;
     padding: 0 var(--ed-gutter);
@@ -415,11 +448,15 @@
     border-bottom-color: rgba(128, 128, 128, .35);
   }
 
-  /* 正文让位：pinned 后归零（顶部空间交给目录列使用） */
+  /* 正文顶部留白：
+     顶部态用 padding-top 让出悬浮块高度（--ed-float-h）；
+     pinned 后**不归零** —— 归零会让正文整体上移「悬浮块高度」那么多，
+     文章第一个标题（引子）会顶到视口最上沿、上方几乎没有余量。
+     保留 48px（不含 .ed-shell 自身的 --ed-top: 16px）。 */
   .ed-single .ed-main {
     transition: padding-top .42s cubic-bezier(.22, .61, .36, 1);
   }
-  .ed-single .ed-shell.is-pinned .ed-main { padding-top: 0; }
+  .ed-single .ed-shell.is-pinned .ed-main { padding-top: 48px; }
 
   /* 目录列让位：pinned 后撑出悬浮块高度，目录排在其下方。
      注意 spacer 只预留「入口 + header」的净高（不含底板外扩），
@@ -472,6 +509,16 @@
     .ed-single .ed-main,
     .ed-single .ed-rail-spacer { transition: none; }
   }
+}
+
+/* 目录的滚动不与外层页面串联（scroll chaining）：
+   在目录里滚到顶/底后继续滚，不应把页面一起带走 —— 否则页面一滚，
+   悬浮块就会跟着迁移，观感突兀。contain 只切断链式传递，
+   不影响目录自身的滚动。放在 media query 之外，
+   宽屏（.ed-rail / .toc）与窄屏悬浮抽屉两处滚动容器一并覆盖。 */
+.ed-single .ed-rail,
+.ed-single .ed-rail .toc {
+  overscroll-behavior: contain;
 }
 
 /* 目录列宽：默认 300px；超宽屏加宽到 340px（见文件开头的 1760px 查询）。
@@ -621,7 +668,7 @@ body.dark .ed-icon-sun { display: block; }
     justify-content: center;
     position: fixed;
     right: 30px;
-    bottom: 114px;            /* 回到顶部(bottom:60) 上方，错开 12px 间距 */
+    bottom: 138px;            /* 队列：设置(30) → 回到顶部(84) → 目录(138) */
     z-index: 99;
     width: 42px;
     height: 42px;
@@ -847,7 +894,15 @@ body.ed-toc-lock { overflow: hidden; }
 /* 卡片正文限宽：右列在宽屏下接近 1200px，不限宽的话标题/摘要会拉成长行。
    分隔线（.ed-card 的 border-bottom）仍铺满整列 —— 杂志式的做法是
    线满栏、字限宽。 */
-.ed-card-body { min-width: 0; max-width: var(--ed-measure-max); }
+.ed-card-body {
+  min-width: 0;
+  max-width: var(--ed-measure-max);
+  /* 三段式竖直布局：标题贴顶、元信息贴底、摘要占据中间剩余空间。
+     卡片总高 = 标题(固定 2 行) + 摘要(至少 3 行) + 元信息(3 行)，
+     三者高度都由行数定死，所以每张卡片等高、内部基线互相对齐。 */
+  display: flex;
+  flex-direction: column;
+}
 .ed-card-title {
   font-family: var(--ed-serif);
   font-size: 1.46rem;
@@ -856,13 +911,32 @@ body.ed-toc-lock { overflow: hidden; }
   margin: 0 0 var(--ed-space-xs);
   color: var(--primary);
   transition: color .22s ease;
+  /* 固定占 2 行：高度写死，保证标题顶端对齐、下方元素起于同一基线 */
+  flex: none;
+  height: calc(1.26em * 2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .ed-card:hover .ed-card-title { color: var(--accent); }
+/* 摘要容器：吃掉标题与元信息之间的全部剩余空间，内容在其中垂直居中。
+   min-height 保证短摘要也撑满 3 行，不把卡片压矮。 */
 .ed-card-desc {
   font-size: .96rem;
   line-height: 1.7;
   color: var(--secondary-text);
   margin: 0 0 var(--ed-space-sm);
+  flex: 1 1 auto;
+  min-height: calc(1.7em * 3);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+/* 摘要正文：最多 3 行，超出截断 */
+.ed-card-desc > p {
+  margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -872,9 +946,21 @@ body.ed-toc-lock { overflow: hidden; }
   font-size: .8rem;
   line-height: 1.5;
   color: var(--secondary-text);
+  flex: none;
 }
 /* 卡片内的链接（如 meta 里的标签）要浮在覆盖层之上才能点 */
 .ed-card-meta a { position: relative; z-index: 2; }
+
+/* meta 的每一段（字数/时长、创建/更新、署名）各自成一行。
+   注意：主题把 .post-meta 设成了 display:flex（见主题 common/post-single.css），
+   会把这几段横向排成一行 —— 文章页在此显式改回块级；
+   卡片用的是 .ed-card-meta（普通块级 div），本来就正常。 */
+.ed-single .post-meta { display: block; }
+
+/* 两段之间补一点行间距，避免高行高下贴得太近 */
+.ed-meta-line + .ed-meta-line {
+  margin-top: 2px;
+}
 
 /* ---------- 首页并排卡片（.ed-cards--pair） ----------
    首页只放"1 篇最新 + 1 篇随机"（见 hugo.toml [params.home]），两篇并排更好看，
@@ -1321,13 +1407,22 @@ body.ed-shell-body { background: var(--theme); }
      字号 16px（≈ .89rem）、行高 1.75（行距 ≈ 28px）。
    段间距同步从 1.2em 降到 .95em，保持"段落分明但不散"的节奏。 */
 .ed-single .post-content {
-  font-family: var(--ed-sans);
-  font-size: 16px;
-  line-height: 1.75;
-  letter-spacing: .01em;
+  /* 字体 / 字号 / 行高 / 字距 / 字重 / 对齐都走「阅读偏好」变量
+     （右下角设置面板可调） */
+  font-family: var(--ed-read-font);
+  font-size: var(--ed-read-size);
+  line-height: var(--ed-read-leading);
+  letter-spacing: var(--ed-read-tracking);
+  font-weight: var(--ed-read-weight);
+  text-align: var(--ed-read-align);
   color: var(--content);
 }
-.ed-single .post-content p { margin: .95em 0; }
+/* 对齐只作用于文字流；代码块保持左对齐，避免「两端对齐」把空格拉开。
+   代码字体单独一个变量 --ed-read-code（面板「代码」下拉），
+   默认等于等宽栈 --code-font —— 不选也是等宽，不会跟正文西文字体跑。 */
+.ed-single .post-content pre,
+.ed-single .post-content pre code { text-align: left; font-family: var(--ed-read-code); }
+.ed-single .post-content p { margin: var(--ed-read-para) 0; text-indent: var(--ed-read-indent); }
 .ed-single .post-content li { margin: .38em 0; }
 /* 列表整体留白：与正文段落节奏保持一致 */
 .ed-single .post-content ul,
@@ -1336,7 +1431,7 @@ body.ed-shell-body { background: var(--theme); }
 /* ---------- 代码 ---------- */
 /* 行内 code 减重（缩小 padding / 字号），代码块保持等宽 */
 .ed-single .post-content code {
-  font-family: var(--code-font);
+  font-family: var(--ed-read-code);
   font-size: .88em;
   padding: 2px 5px;
 }
@@ -1370,6 +1465,7 @@ body.ed-shell-body { background: var(--theme); }
   border-radius: 6px;
   background: var(--code-bg);
   overflow-x: auto;
+  font-family: var(--ed-read-code);
 }
 
 /* em 强调：中文无真斜体，去掉 skew 模拟的发虚，改用点状下划线保留语义 */
@@ -1494,8 +1590,166 @@ body.ed-shell-body { background: var(--theme); }
 
 /* ---------- 窄屏 ---------- */
 @media (max-width: 768px) {
-  .ed-single .post-content { font-size: 1.06rem; line-height: 1.85; }
+  /* 窄屏的默认阅读尺度（比桌面大一档）。用户手动调过后，
+     脚本写的内联变量会盖过这里，不会被移动端默认值顶掉。 */
+  :root {
+    --ed-read-size: 17px;
+    --ed-read-leading: 1.85;
+  }
   /* 窄屏左右内边距沿用 --ed-page-pad-x，不再单独写 18px */
+}
+
+/* ---------- 阅读设置（文章页右下角按钮 + 面板） ----------
+   右下角是一条竖向按钮队列，从下往上：
+     设置(bottom 30) → 回到顶部(bottom 84) → 竖屏目录(bottom 138)
+   每个 42px 高、间隔 12px。所以这里把主题的 .top-link 和竖屏的
+   .ed-toc-fab 各上移一格，给设置按钮让出最下面那个位置。 */
+.top-link { bottom: 84px; }
+
+.ed-read-fab {
+  position: fixed;
+  right: 30px;
+  bottom: 30px;
+  z-index: 99;
+  width: 42px;
+  height: 42px;
+  padding: 11px;
+  border: none;
+  border-radius: 64px;
+  background: var(--tertiary);
+  color: var(--secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color .18s ease;
+}
+.ed-read-fab:hover { color: var(--accent); }
+.ed-read-fab svg { width: 20px; height: 20px; }
+
+.ed-read-panel {
+  position: fixed;
+  right: 30px;
+  bottom: 82px;
+  z-index: 100;
+  /* 两列布局；宽一点更从容，窄屏时退到视口内 */
+  width: min(360px, calc(100vw - 60px));
+  /* 选项变多后可能超出视口高度：限高并允许面板内部滚动 */
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--theme);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, .16);
+  font-size: .82rem;
+  color: var(--secondary-text);
+  display: none;
+}
+.ed-read-panel.is-open { display: block; }
+
+.ed-read-title {
+  margin: 0 0 8px;
+  font-size: .76rem;
+  font-weight: 500;
+  letter-spacing: .06em;
+  color: var(--secondary-text);
+}
+
+/* 分组小标题：把选项按「字体 / 文字 / 段落 / 版面」切开，扫读更快 */
+.ed-read-group {
+  margin: 12px 0 2px;
+  font-size: .68rem;
+  letter-spacing: .12em;
+  color: var(--tertiary);
+}
+.ed-read-title + .ed-read-group { margin-top: 2px; }
+
+/* 两列网格：选项排成 2 列，行数减半；窄屏自动回单列。
+   滑块因此不再横向拉满，只占本列剩余宽度。 */
+.ed-read-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 14px;
+}
+
+.ed-read-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  min-width: 0;
+}
+/* label 必须单行：固定宽度不够时中文会一字一行地竖排。
+   改为按内容宽度 + 禁止换行 —— 各项都是两个字，天然对齐。 */
+.ed-read-row > label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* 步进器：− [值] +。
+   原来的 range 仍留在 DOM 里承载数值与事件（脚本读写它），只做视觉隐藏，
+   所以这里不再需要滑块样式，横向也只占约 90px。 */
+.ed-read-step {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.ed-read-step input[type="range"] { display: none; }
+.ed-read-step > output {
+  flex: 1 1 auto;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.ed-read-step > button {
+  flex: 0 0 22px;
+  height: 22px;
+  padding: 0;
+  font-size: .84rem;
+  line-height: 1;
+  color: var(--secondary-text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease;
+}
+.ed-read-step > button:hover { color: var(--accent); border-color: var(--accent); }
+
+/* 字体下拉：候选项由脚本按「本机实际装了哪些」填充
+   （见 layouts/partials/reading_settings.html 的 fontAvailable）。 */
+.ed-read-row > select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 6px;
+  font-size: .78rem;
+  font-family: inherit;
+  color: var(--secondary-text);
+  background: var(--theme);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ed-read-reset {
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px 0;
+  font-size: .78rem;
+  color: var(--secondary-text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease;
+}
+.ed-read-reset:hover { color: var(--accent); border-color: var(--accent); }
+
+/* 太窄就回单列，否则两个控件挤在一起没法操作 */
+@media (max-width: 400px) {
+  .ed-read-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ---------- 404 ---------- */

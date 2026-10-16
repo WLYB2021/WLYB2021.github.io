@@ -81,6 +81,14 @@ priority = 0.5
 [params]
 author = "Xi"
 description = "Writing what's worth keeping."
+# 联系方式：邮箱只填这一处。报头社交图标（ed_masthead.html）与文章署名
+# （post_meta.html）都读 params.email。必须在 [params] 直接层 ——
+# 落到下面的 [params.xxx] 子表里就取不到（此前它被写进了 [params.profile]，
+# 导致全站读到的 params.email 是空的）。
+email = "yuxi279239@163.com"
+# 日期显示格式：meta 的「创建于 / 更新于」都走它，保证两处一致。
+# 必须在 [params] 直接层 —— 落到下面的 [params.xxx] 子表就取不到了。
+DateFormat = "2006-01-02"
 defaultTheme = "auto"
 ShowReadingTime = true
 ShowWordCount = true
@@ -156,10 +164,6 @@ subtitle = "Writing what's worth keeping."
 # 面向的是主题自带的 home_info.html，而本站首页模板早就覆盖了它，全站没有任何
 # 模板读它们 —— 属于填了也不生效的死配置。要做头像得先在 partials/ed_masthead.html
 # 里加 <img> 与样式，再把键加回来（外壳统一后，改这一处 6 个外壳页同时生效）。
-
-# ---------- 联系方式 ----------
-# 邮箱只填这一处，社交图标会自动引用，改地址不用改两遍
-email = "yuxi279239@163.com"
 
 # ---------- 社交图标（报头） ----------
 # 不需要的条目整段删除即可；index.html 按 icon 名从主题 svg.html 取图标，

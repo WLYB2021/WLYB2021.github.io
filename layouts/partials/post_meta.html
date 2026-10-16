@@ -1,35 +1,70 @@
 {{- /* 文章 meta（覆盖主题 post_meta.html）
   ---------------------------------------------------------------
-  在主题原逻辑（日期 / 阅读时长 / 字数 / 作者）基础上追加：
-    lastmod —— 仅在文章页且「更新时间与发布日期不同天」时显示「更新于 X」。
-    依赖 hugo.toml 的 enableGitInfo = true（CI 已 fetch-depth: 0）与
-    params.showLastMod = true；关掉开关即回到主题默认行为。
+  输出三行：
+    第一行：共 N 字 · 预计阅读时长 M 分钟
+    第二行：创建于 X · 更新于 Y
+    第三行：署名 —— 人名 CoWith 模型 Use 工具（不显示字段标签）
+
+  署名规则：
+    author —— 人类作者，必需；页面级优先，回退站点级 params.author；
+              可为字符串或数组（多个名字用列表）。
+    链接   —— 作者名做成链接：优先 GitHub 主页（取自 params.social 中
+              icon = "github" 那条的 url），没有 GitHub 就回退到邮箱 mailto。
+    model / tool —— 两个互相独立可选字段，分别渲染为「CoWith …」「Use …」。
+
+  「更新于」由 git 提交驱动的 lastmod 提供，仅在与创建日不同天时出现。
+
+  依赖 hugo.toml：enableGitInfo = true、params.showLastMod = true、
+                params.DateFormat = "2006-01-02"、params.email、params.social。
+  注意：本 partial 被 4 处调用 —— 文章页 header，以及首页 / 列表页 /
+        归档页的卡片，改动会同时影响这几处的 meta。
 */ -}}
 {{- $scratch := newScratch }}
 
-{{- if not .Date.IsZero -}}
-{{- $scratch.Add "meta" (slice (printf "<span title='%s'>%s</span>" (.Date) (.Date | time.Format (default "January 2, 2006" site.Params.DateFormat)))) }}
-{{- end -}}
-
-{{- if (.Param "ShowReadingTime") -}}
-{{- $scratch.Add "meta" (slice (i18n "read_time" .ReadingTime | default (printf "%d min" .ReadingTime))) }}
-{{- end -}}
-
+{{- /* ---- 第一行：字数 · 阅读时长 ---- */ -}}
 {{- if (.Param "ShowWordCount") -}}
-{{- $scratch.Add "meta" (slice (i18n "words" .WordCount | default (printf "%d words" .WordCount))) }}
+{{- $scratch.Add "line1" (slice (printf "共 %d 字" .WordCount)) }}
+{{- end -}}
+{{- if (.Param "ShowReadingTime") -}}
+{{- $scratch.Add "line1" (slice (printf "预计阅读时长 %d 分钟" .ReadingTime)) }}
 {{- end -}}
 
-{{- /* 更新时间：git 提交驱动的 lastmod；不同天才显示，避免每篇都挂着重复日期 */ -}}
+{{- /* ---- 第二行：创建于 · 更新于 ---- */ -}}
+{{- if not .Date.IsZero -}}
+{{- $scratch.Add "line2" (slice (printf "<span title='%s'>创建于 %s</span>" (.Date) (.Date | time.Format (default "2006-01-02" site.Params.DateFormat)))) }}
+{{- end -}}
 {{- if and (.Param "showLastMod") (eq .Kind "page") (not .Lastmod.IsZero) (not .Date.IsZero) (gt .Lastmod.Unix .Date.Unix) -}}
-{{- $scratch.Add "meta" (slice (printf "<span title='最后更新 %s'>更新于 %s</span>" (.Lastmod) (.Lastmod | time.Format "2006-01-02"))) }}
+{{- $scratch.Add "line2" (slice (printf "<span title='最后更新 %s'>更新于 %s</span>" (.Lastmod) (.Lastmod | time.Format "2006-01-02"))) }}
 {{- end -}}
 
+{{- /* ---- 第三行：署名  人名 CoWith 模型 Use 工具 ---- */ -}}
+{{- $credit := slice -}}
 {{- if not (.Param "hideAuthor") -}}
-{{- with (partial "author.html" .) }}
-{{- $scratch.Add "meta" (slice .) }}
-{{- end }}
-{{- end }}
+{{- with (.Param "author" | default site.Params.author) -}}
+{{- $names := delimit (cond (reflect.IsSlice .) . (slice .)) ", " -}}
+{{- $email := site.Params.email -}}
+{{- /* GitHub 主页：从社交图标里找 icon=github 的那条，避免重复配置 */ -}}
+{{- $github := "" -}}
+{{- range site.Params.social -}}
+{{- if eq (lower (string (.icon | default ""))) "github" }}{{ $github = .url }}{{ end -}}
+{{- end -}}
+{{- /* 链接目标：GitHub 优先，没有则回退邮箱 */ -}}
+{{- $href := "" -}}
+{{- if $github }}{{ $href = $github }}{{ else if $email }}{{ $href = printf "mailto:%s" $email }}{{ end -}}
+{{- $authorHTML := $names -}}
+{{- with $href }}{{ $authorHTML = printf "<a href=\"%s\">%s</a>" . $names }}{{ end -}}
+{{- $credit = $credit | append $authorHTML -}}
+{{- end -}}
+{{- with (.Param "model") }}{{ $credit = $credit | append (printf "CoWith %s" .) }}{{ end -}}
+{{- with (.Param "tool") }}{{ $credit = $credit | append (printf "Use %s" .) }}{{ end -}}
+{{- end -}}
 
-{{- with ($scratch.Get "meta") }}
-{{- delimit . "&nbsp;·&nbsp;" | safeHTML -}}
+{{- with ($scratch.Get "line1") -}}
+<div class="ed-meta-line">{{ delimit . "&nbsp;·&nbsp;" | safeHTML }}</div>
+{{- end -}}
+{{- with ($scratch.Get "line2") -}}
+<div class="ed-meta-line">{{ delimit . "&nbsp;·&nbsp;" | safeHTML }}</div>
+{{- end -}}
+{{- with $credit -}}
+<div class="ed-meta-line ed-meta-credit">{{ delimit . ", " | safeHTML }}</div>
 {{- end -}}

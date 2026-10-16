@@ -1,14 +1,16 @@
 ---
-title: 从单体到共享：应用架构演进的一条可行路径
-slug: from-monolith-to-shared
+title: "从单体到共享：应用架构演进的一条可行路径"
+slug: "from-monolith-to-shared"
 date: 2026-10-08T10:00:00+08:00
 tags:
-  - 架构
-  - KMP
-  - 跨平台
-  - 工程化
+  - "架构"
+  - "KMP"
+  - "跨平台"
+  - "工程化"
 draft: false
-description: 一条可行路径：从单体到模块再到共享。
+description: "一条可行路径：从单体到模块再到共享。"
+model: "DeepSeek 4.1 Flash"
+tool: "WorkBuddy"
 ---
 
 ## 〇 · 引子

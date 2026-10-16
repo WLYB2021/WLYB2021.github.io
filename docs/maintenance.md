@@ -59,7 +59,7 @@
 
 ## 本地预览（手动方式）
 
-`make serve`（即 `scripts/dev.sh`）已覆盖绝大多数场景。需要手动执行时：
+`make serve`（即 `scripts/dev.sh`）已覆盖绝大多数场景；Windows 的 Git Bash 默认不带 `make`，直接跑 `./scripts/dev.sh` 即可，两者等价。需要手动执行时：
 
 ```bash
 git clone --depth 1 --branch v8.0 https://github.com/adityatelange/hugo-PaperMod.git themes/PaperMod
@@ -90,6 +90,34 @@ hugo server
 | `tags` | 标签数组 |
 | `description` | 一句话摘要；显示在首页卡片与分享卡片 |
 | `disable_comments` | 单篇关闭评论时加此项 |
+| `author` | 人类作者署名（必需）；不写则回退站点级 `params.author`（当前 `Xi`）。可字符串或数组 |
+| `model` | 使用的模型（可选）；署名里渲染为「CoWith …」 |
+| `tool` | 使用的工具（可选）；署名里渲染为「Use …」，与 `model` 互相独立 |
+
+> 署名整体形如「人名, CoWith 模型, Use 工具」，各段用逗号分隔，缺哪段就不出现。
+> 作者名做成链接：优先取 `[[params.social]]` 中 `icon = "github"` 那条的
+> `url`（即 GitHub 主页），没有 GitHub 时回退到邮箱（`mailto:` + `params.email`）。
+
+#### 字段顺序与写法
+
+顺序固定为 `title → slug → date → tags → draft → description`；值**一律加引号**（`date` 除外），`tags` 用 `- 项` 列表：
+
+```yaml
+---
+title: "文章标题"
+slug: "url-slug"
+date: 2026-10-08T10:00:00+08:00
+tags:
+  - "KMP"
+  - "架构"
+draft: false
+description: "一句话摘要。"
+---
+```
+
+- 加引号是为了与脚手架对齐：`archetypes/default.md` 的 `title`/`slug` 含 `{{ }}`（`{` 是 YAML 特殊字符）本就必须加引号，以它为准能让新文章零调整，也顺带避开 YAML 解析的坑。
+- 不再使用 `categories` —— `hugo.toml` 的 `[taxonomies]` 只定义了 `tag`，写 `categories` 不会生成任何页面。将来要分类，先在配置里加 taxonomy。
+- 早前四篇文章的 front matter 写法不一（引号有无、`tags` 行内与列表混用），现已按上述统一。
 
 > 导语只留一处：标题下方的副标题由 front matter `description` 渲染，**正文开头不再
 > 重复放引用块**（早前四篇是「引用块 + `<!--more-->` + `---`」开头，已统一去掉，正文从 h2 开始）。

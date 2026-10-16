@@ -1,16 +1,18 @@
 ---
-title: 操作系统 Agent 层的单向性及其设计空间
-slug: one-way-agent-layer
+title: "操作系统 Agent 层的单向性及其设计空间"
+slug: "one-way-agent-layer"
 date: 2026-10-13T10:00:00+08:00
 tags:
-  - AI Agent
-  - Agent Runtime
-  - 操作系统
-  - 系统设计
-  - 架构
-  - Android
+  - "AI Agent"
+  - "Agent Runtime"
+  - "操作系统"
+  - "系统设计"
+  - "架构"
+  - "Android"
 draft: false
-description: 操作系统已经铺好 agent 调用应用的入向链路，却没有反向的任务委派与动作级治理；本文画出系统层 Agent infra 的设计空间——会话、上下文、调度、治理——并分析责任、商业与监管如何决定它何时到来。
+description: "操作系统已经铺好 agent 调用应用的入向链路，却没有反向的任务委派与动作级治理；本文画出系统层 Agent infra 的设计空间——会话、上下文、调度、治理——并分析责任、商业与监管如何决定它何时到来。"
+model: "DeepSeek 4.1 Flash"
+tool: "WorkBuddy"
 ---
 
 ## 一 · 从客户端 Agent 的架构困境说起

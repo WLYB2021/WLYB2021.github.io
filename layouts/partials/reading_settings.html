@@ -1,0 +1,442 @@
+{{- /* 阅读设置：文章页右下角按钮 + 面板
+  ---------------------------------------------------------------
+  可调（按面板分组）：西文/中文/代码字体；字号/字重/字距/行高；
+                    段距/缩进/对齐；行宽/版心。
+
+  机制：
+    · 改的是 :root 上的 CSS 变量（--ed-read-* 与 --ed-measure），
+      内联变量优先级最高，因此能盖过 media query 里 --ed-measure 的 clamp。
+    · 字体拆成「西文 + 中文」两个下拉，最终拼成一条 font-family：
+        {西文栈}, {中文栈}, sans-serif
+      西文在前、中文在后 —— CSS 字体栈按字符回退，西文字符命中前者，
+      中文字符前者没有字形、自动落到后者，于是实现了中西文分开设置。
+      注意：两个候选值内部都不含通用族（serif/sans-serif），
+      通用族只在整个栈的末尾出现一次，否则会从中间掐断中文回退。
+    · 候选按「本机装了哪些」过滤后才进下拉（canvas 测宽法）；站点不加载
+      Web 字体，所以可选范围就是读者设备上的系统字体。
+    · 偏好存 localStorage（键 ed-reading-prefs），刷新后保留。
+
+  样式见 custom.css 的「阅读设置」段。
+*/ -}}
+<div class="ed-read" data-ed-read>
+  <button class="ed-read-fab" type="button" data-ed-read-fab
+          aria-expanded="false" aria-controls="ed-read-panel"
+          aria-label="阅读设置" title="阅读设置">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none"
+         stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
+
+  <div class="ed-read-panel" id="ed-read-panel" data-ed-read-panel role="dialog" aria-label="阅读设置">
+    <p class="ed-read-title">阅读设置</p>
+
+    <p class="ed-read-group">字体</p>
+    <div class="ed-read-grid">
+      <div class="ed-read-row">
+        <label for="ed-read-font-latin">西文</label>
+        <select id="ed-read-font-latin" data-ed-read-latin aria-label="西文字体"></select>
+      </div>
+      <div class="ed-read-row">
+        <label for="ed-read-font-cjk">中文</label>
+        <select id="ed-read-font-cjk" data-ed-read-cjk aria-label="中文字体"></select>
+      </div>
+      <div class="ed-read-row">
+        <label for="ed-read-code">代码</label>
+        <select id="ed-read-code" data-ed-read-code aria-label="代码字体"></select>
+      </div>
+    </div>
+
+    <p class="ed-read-group">文字</p>
+    <div class="ed-read-grid">
+      <div class="ed-read-row">
+        <label for="ed-read-size">字号</label>
+        <div class="ed-read-step">
+          <button type="button" data-step="-1" aria-label="减小字号">−</button>
+          <input id="ed-read-size" type="range" min="14" max="21" step="1" data-pref="size" data-default="16">
+          <output data-out="size"></output>
+          <button type="button" data-step="1" aria-label="增大字号">+</button>
+        </div>
+      </div>
+      <div class="ed-read-row">
+        <label for="ed-read-weight">字重</label>
+        <select id="ed-read-weight" data-pref="weight" data-default="400">
+          <option value="300">细</option>
+          <option value="400">常规</option>
+          <option value="500">中等</option>
+          <option value="600">半粗</option>
+        </select>
+      </div>
+      <div class="ed-read-row">
+        <label for="ed-read-tracking">字距</label>
+        <div class="ed-read-step">
+          <button type="button" data-step="-1" aria-label="减小字距">−</button>
+          <input id="ed-read-tracking" type="range" min="-0.02" max="0.1" step="0.005" data-pref="tracking" data-default="0.01">
+          <output data-out="tracking"></output>
+          <button type="button" data-step="1" aria-label="增大字距">+</button>
+        </div>
+      </div>
+      <div class="ed-read-row">
+        <label for="ed-read-leading">行高</label>
+        <div class="ed-read-step">
+          <button type="button" data-step="-1" aria-label="减小行高">−</button>
+          <input id="ed-read-leading" type="range" min="1.4" max="2.3" step="0.05" data-pref="leading" data-default="1.75">
+          <output data-out="leading"></output>
+          <button type="button" data-step="1" aria-label="增大行高">+</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="ed-read-group">段落</p>
+    <div class="ed-read-grid">
+      <div class="ed-read-row">
+        <label for="ed-read-para">段距</label>
+        <div class="ed-read-step">
+          <button type="button" data-step="-1" aria-label="减小段距">−</button>
+          <input id="ed-read-para" type="range" min="0.4" max="1.8" step="0.05" data-pref="para" data-default="0.95">
+          <output data-out="para"></output>
+          <button type="button" data-step="1" aria-label="增大段距">+</button>
+        </div>
+      </div>
+      <div class="ed-read-row">
+        <label for="ed-read-indent">缩进</label>
+        <div class="ed-read-step">
+          <button type="button" data-step="-1" aria-label="减小缩进">−</button>
+          <input id="ed-read-indent" type="range" min="0" max="3" step="0.5" data-pref="indent" data-default="0">
+          <output data-out="indent"></output>
+          <button type="button" data-step="1" aria-label="增大缩进">+</button>
+        </div>
+      </div>
+      <div class="ed-read-row">
+        <label for="ed-read-align">对齐</label>
+        <select id="ed-read-align" data-pref="align" data-default="left">
+          <option value="left">左对齐</option>
+          <option value="justify">两端对齐</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="ed-read-group">版面</p>
+    <div class="ed-read-grid">
+      <div class="ed-read-row">
+        <label for="ed-read-measure">行宽</label>
+        <div class="ed-read-step">
+          <button type="button" data-step="-1" aria-label="减小行宽">−</button>
+          <input id="ed-read-measure" type="range" min="620" max="1200" step="20" data-pref="measure">
+          <output data-out="measure"></output>
+          <button type="button" data-step="1" aria-label="增大行宽">+</button>
+        </div>
+      </div>
+      <div class="ed-read-row">
+        <label for="ed-read-container" title="整个内容区的宽度（含目录列与列间距）">版心</label>
+        <div class="ed-read-step">
+          <button type="button" data-step="-1" aria-label="减小版心">−</button>
+          <input id="ed-read-container" type="range" min="1100" max="1800" step="20" data-pref="container">
+          <output data-out="container"></output>
+          <button type="button" data-step="1" aria-label="增大版心">+</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="ed-read-reset" type="button" data-ed-read-reset>恢复默认</button>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var KEY = 'ed-reading-prefs';
+    var wrap = document.querySelector('[data-ed-read]');
+    if (!wrap) return;
+
+    var fab = wrap.querySelector('[data-ed-read-fab]');
+    var panel = wrap.querySelector('[data-ed-read-panel]');
+    if (!fab || !panel) return;
+
+    /* 偏好键 → [CSS 变量名, 单位] */
+    var SPEC = {
+      size:      ['--ed-read-size',     'px'],
+      leading:   ['--ed-read-leading',  ''],
+      tracking:  ['--ed-read-tracking', 'em'],
+      weight:    ['--ed-read-weight',   ''],
+      indent:    ['--ed-read-indent',   'em'],
+      para:      ['--ed-read-para',     'em'],
+      align:     ['--ed-read-align',    ''],
+      measure:   ['--ed-measure',       'px'],   /* 正文行宽 */
+      container: ['--ed-container-w',   'px'],   /* 整体版心宽度 */
+      code:      ['--ed-read-code',     '']      /* 代码字体（值为整条字体栈） */
+    };
+
+    /* 读 :root 上该偏好变量的**当前计算值**（去掉单位）。
+       用来在"用户没存过偏好"时回填控件 —— 这样面板显示的就是当前断点
+       的真实默认。宽屏（≥1080）与窄屏的默认不同（宽屏是书籍式排版：
+       缩进 2em / 两端对齐 / 段距 .6em …），用一个写死的 data-default
+       去回填，必然在另一个断点上对不上。
+       行宽 / 版心不在此列：--ed-measure 可能是 clamp()、--ed-container-w
+       可能为空，交给下面的专门探针（读元素的实际 max-width）。 */
+    function cssDefault(k) {
+      if (k === 'measure' || k === 'container') return null;
+      var spec = SPEC[k];
+      if (!spec) return null;
+      var raw = getComputedStyle(root).getPropertyValue(spec[0]).trim();
+      if (!raw) return null;
+      var u = spec[1];
+      if (u && raw.slice(-u.length) === u) raw = raw.slice(0, -u.length).trim();
+      return raw || null;
+    }
+
+    /* ---------- 字体候选 ----------
+       f = 用于检测的字体名（空 = 系统默认，永远可选）
+       s = 写进 font-family 的片段。**一律不含通用族**：
+           西文片段在前、中文片段在后，通用族由 compose() 统一挂到末尾。 */
+    var FONT_LATIN = [
+      { n: '系统默认',         f: '',                  s: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial' },
+      { n: 'Georgia',          f: 'Georgia',           s: 'Georgia' },
+      { n: 'Times New Roman',  f: 'Times New Roman',   s: '"Times New Roman"' },
+      { n: 'Cambria',          f: 'Cambria',           s: 'Cambria' },
+      { n: 'Arial',            f: 'Arial',             s: 'Arial, Helvetica' },
+      { n: 'Helvetica',        f: 'Helvetica',         s: 'Helvetica, Arial' },
+      { n: 'Verdana',          f: 'Verdana',           s: 'Verdana, Geneva' },
+      { n: 'Tahoma',           f: 'Tahoma',            s: 'Tahoma, Verdana' },
+      { n: 'Segoe UI',         f: 'Segoe UI',          s: '"Segoe UI"' },
+      { n: 'Calibri',          f: 'Calibri',           s: 'Calibri' }
+      /* 等宽字体（Consolas 等）不在此列 —— 它们归「代码」下拉 */
+    ];
+    var FONT_CJK = [
+      { n: '系统默认',         f: '',                   s: '"PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Noto Sans SC"' },
+      { n: '微软雅黑',         f: 'Microsoft YaHei',    s: '"Microsoft YaHei"' },
+      { n: '苹方',             f: 'PingFang SC',        s: '"PingFang SC"' },
+      { n: '冬青黑体',         f: 'Hiragino Sans GB',   s: '"Hiragino Sans GB"' },
+      { n: '黑体',             f: 'SimHei',             s: 'SimHei' },
+      { n: '等线',             f: 'DengXian',           s: 'DengXian' },
+      { n: '思源黑体',         f: 'Source Han Sans SC', s: '"Source Han Sans SC", "Noto Sans SC"' },
+      { n: '宋体',             f: 'SimSun',             s: 'SimSun' },
+      { n: '宋体-简',          f: 'Songti SC',          s: '"Songti SC"' },
+      { n: '华文宋体',         f: 'STSong',             s: '"STSong"' },
+      { n: '思源宋体',         f: 'Source Han Serif SC', s: '"Source Han Serif SC", "Noto Serif CJK SC"' },
+      { n: '楷体',             f: 'KaiTi',              s: 'KaiTi, "Kaiti SC"' },
+      { n: '仿宋',             f: 'FangSong',           s: 'FangSong, "STFangsong"' }
+    ];
+    /* 等宽字体候选（每条自带 monospace 兜底，缺失时不会掉回非等宽）。 */
+    var FONT_MONO = [
+      { n: 'Consolas',         f: 'Consolas',          s: 'Consolas, monospace' },
+      { n: 'Cascadia Mono',    f: 'Cascadia Mono',     s: '"Cascadia Mono", monospace' },
+      { n: 'SF Mono',          f: 'SF Mono',           s: '"SF Mono", monospace' },
+      { n: 'Menlo',            f: 'Menlo',             s: 'Menlo, monospace' },
+      { n: 'Monaco',           f: 'Monaco',            s: 'Monaco, monospace' },
+      { n: 'JetBrains Mono',   f: 'JetBrains Mono',    s: '"JetBrains Mono", monospace' },
+      { n: 'Fira Code',        f: 'Fira Code',         s: '"Fira Code", monospace' },
+      { n: 'Source Code Pro',  f: 'Source Code Pro',   s: '"Source Code Pro", monospace' },
+      { n: 'IBM Plex Mono',    f: 'IBM Plex Mono',     s: '"IBM Plex Mono", monospace' },
+      { n: 'Roboto Mono',      f: 'Roboto Mono',       s: '"Roboto Mono", monospace' },
+      { n: 'DejaVu Sans Mono', f: 'DejaVu Sans Mono',  s: '"DejaVu Sans Mono", monospace' },
+      { n: 'Liberation Mono',  f: 'Liberation Mono',   s: '"Liberation Mono", monospace' },
+      { n: 'Courier New',      f: 'Courier New',       s: '"Courier New", monospace' }
+    ];
+    /* 「代码」下拉候选 = 系统默认（等宽）+ **全部西文比例字体** + 等宽字体。
+       已放开"代码只能用等宽"的限制：比例字体同样可选。
+       首项 value 为空 → 移除 --ed-read-code → 落回默认等宽栈 --code-font。 */
+    var FONT_CODE = [{ n: '系统默认（等宽）', f: '', s: '' }];
+    FONT_LATIN.forEach(function (c) { if (c.n !== '系统默认') FONT_CODE.push(c); });
+    FONT_MONO.forEach(function (c) { FONT_CODE.push(c); });
+    var GENERIC = 'sans-serif';   /* 整条栈的唯一通用兜底（正文，代码自带 monospace） */
+
+    /* canvas 测宽：用中英混排串，跟三个通用族逐个比宽度，
+       宽度不同即说明候选字体真的生效。 */
+    function fontAvailable(name) {
+      if (!name) return true;
+      try {
+        var ctx = document.createElement('canvas').getContext('2d');
+        var text = '字体验证Abc123';
+        var size = '48px';
+        var bases = ['monospace', 'serif', 'sans-serif'];
+        var baseW = bases.map(function (b) {
+          ctx.font = size + ' ' + b;
+          return ctx.measureText(text).width;
+        });
+        for (var i = 0; i < bases.length; i++) {
+          ctx.font = size + ' "' + name + '", ' + bases[i];
+          if (Math.abs(ctx.measureText(text).width - baseW[i]) > 0.5) return true;
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    function readPrefs() {
+      try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+    }
+    function writePrefs(p) {
+      try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {}
+    }
+
+    var latinSel = panel.querySelector('[data-ed-read-latin]');
+    var cjkSel = panel.querySelector('[data-ed-read-cjk]');
+    var codeSel = panel.querySelector('[data-ed-read-code]');
+
+    function composeFont(p) {
+      var parts = [];
+      if (p.west) parts.push(p.west);
+      if (p.cjk) parts.push(p.cjk);
+      if (!parts.length) return '';          /* 都没设 → 交回 CSS 默认栈 */
+      parts.push(GENERIC);
+      return parts.join(', ');
+    }
+
+    function applyPrefs(p) {
+      var font = composeFont(p);
+      if (font) root.style.setProperty('--ed-read-font', font);
+      else root.style.removeProperty('--ed-read-font');
+      Object.keys(SPEC).forEach(function (k) {
+        var spec = SPEC[k];
+        if (p[k] != null && p[k] !== '') root.style.setProperty(spec[0], p[k] + spec[1]);
+        else root.style.removeProperty(spec[0]);
+      });
+    }
+
+    var prefs = readPrefs();
+    applyPrefs(prefs);
+
+    var prefInputs = panel.querySelectorAll('[data-pref]');
+
+    /* ---------- 填充两个字体下拉 ---------- */
+    function buildSelect(sel, candidates) {
+      if (!sel) return;
+      candidates.forEach(function (c) {
+        if (!fontAvailable(c.f)) return;
+        var opt = document.createElement('option');
+        opt.value = c.s;
+        opt.textContent = c.n;
+        sel.appendChild(opt);
+      });
+    }
+    buildSelect(latinSel, FONT_LATIN);
+    buildSelect(cjkSel, FONT_CJK);
+    buildSelect(codeSel, FONT_CODE);
+
+    /* 回填已存选择（按值匹配）；没存过就保持第一项（系统默认） */
+    function pick(sel, saved) {
+      if (!sel) return;
+      if (saved) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === saved) { sel.selectedIndex = i; return; }
+        }
+      }
+      sel.selectedIndex = 0;
+    }
+    /* 兼容早期单一字体偏好：那时存的是整条栈，塞不回两个下拉，
+       这里只在用户没设过新字段时忽略它（首项即系统默认）。 */
+    pick(latinSel, prefs.west);
+    pick(cjkSel, prefs.cjk);
+    pick(codeSel, prefs.code);
+
+    function onFontChange() {
+      prefs.west = latinSel ? latinSel.value : undefined;
+      prefs.cjk = cjkSel ? cjkSel.value : undefined;
+      prefs.code = codeSel ? codeSel.value : undefined;
+      applyPrefs(prefs);
+      writePrefs(prefs);
+    }
+    if (latinSel) latinSel.addEventListener('change', onFontChange);
+    if (cjkSel) cjkSel.addEventListener('change', onFontChange);
+    if (codeSel) codeSel.addEventListener('change', onFontChange);
+
+    /* 行宽滑块的默认值 = 正文当前的 max-width（随视口 clamp 变化，
+       不能写死）。仅在用户没手动设过行宽时计算。 */
+    var measureInput = panel.querySelector('[data-pref="measure"]');
+    if (measureInput && prefs.measure == null) {
+      var probe = document.querySelector('.ed-single .post-content');
+      if (probe) {
+        var w = parseFloat(getComputedStyle(probe).maxWidth);
+        if (isFinite(w)) measureInput.setAttribute('data-default', String(Math.round(w)));
+      }
+    }
+    /* 版心同理：默认值随视口和断点变化，读容器的实际 max-width */
+    var containerInput = panel.querySelector('[data-pref="container"]');
+    if (containerInput && prefs.container == null) {
+      var shell = document.querySelector('.ed-single .ed-shell');
+      if (shell) {
+        var cw = parseFloat(getComputedStyle(shell).maxWidth);
+        if (isFinite(cw)) containerInput.setAttribute('data-default', String(Math.round(cw)));
+      }
+    }
+
+    function setOut(k, v) {
+      var out = panel.querySelector('[data-out="' + k + '"]');
+      if (out) out.textContent = v;
+    }
+
+    /* 用已存偏好回填控件；没存过时读 :root 的计算值（cssDefault），
+       data-default 仅作最后兜底 —— 这样宽屏/窄屏各自显示真实默认。 */
+    prefInputs.forEach(function (el) {
+      var k = el.getAttribute('data-pref');
+      var v = prefs[k] != null ? prefs[k] : (cssDefault(k) || el.getAttribute('data-default'));
+      if (v != null) el.value = v;
+      setOut(k, el.value);
+    });
+
+    prefInputs.forEach(function (el) {
+      el.addEventListener('input', function () {
+        var k = el.getAttribute('data-pref');
+        prefs[k] = el.value;
+        applyPrefs(prefs);
+        writePrefs(prefs);
+        setOut(k, el.value);
+      });
+    });
+
+    /* 步进器按钮：改的是那个被隐藏的 range，然后派发 input 事件 ——
+       上面这段逻辑（回填、持久化、输出）因此原样复用，不必另写一套。 */
+    panel.querySelectorAll('.ed-read-step').forEach(function (box) {
+      var range = box.querySelector('input[type="range"]');
+      if (!range) return;
+      box.querySelectorAll('button[data-step]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var step = parseFloat(range.step) || 1;
+          var dir = parseFloat(btn.getAttribute('data-step')) || 1;
+          var lo = range.min === '' ? -Infinity : parseFloat(range.min);
+          var hi = range.max === '' ? Infinity : parseFloat(range.max);
+          var next = parseFloat(range.value) + step * dir;
+          if (next < lo) next = lo;
+          if (next > hi) next = hi;
+          /* 0.005 / 0.05 这类步长会攒出浮点尾巴，收拢到 3 位小数 */
+          next = Math.round(next * 1000) / 1000;
+          if (String(next) === range.value) return;
+          range.value = String(next);
+          range.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      });
+    });
+
+    panel.querySelector('[data-ed-read-reset]').addEventListener('click', function () {
+      prefs = {};
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      applyPrefs(prefs);
+      /* 恢复默认 = 移除内联变量，渲染回到 CSS 默认；
+         控件也同步显示当前断点的真实默认（cssDefault），而非写死的 data-default。 */
+      prefInputs.forEach(function (el) {
+        var k = el.getAttribute('data-pref');
+        var v = cssDefault(k) || el.getAttribute('data-default');
+        if (v != null) el.value = v;
+        setOut(k, el.value);
+      });
+      if (latinSel) latinSel.selectedIndex = 0;
+      if (cjkSel) cjkSel.selectedIndex = 0;
+      if (codeSel) codeSel.selectedIndex = 0;
+    });
+
+    function setOpen(open) {
+      panel.classList.toggle('is-open', open);
+      fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    fab.addEventListener('click', function () {
+      setOpen(!panel.classList.contains('is-open'));
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') setOpen(false);
+    });
+    document.addEventListener('click', function (e) {
+      if (!wrap.contains(e.target)) setOpen(false);
+    });
+  })();
+</script>

@@ -1,15 +1,17 @@
 ---
-title: 从传统到现代：Android 应用开发范式的演变
-slug: from-traditional-to-modern-android
+title: "从传统到现代：Android 应用开发范式的演变"
+slug: "from-traditional-to-modern-android"
 date: 2026-10-14T10:00:00+08:00
 tags:
-  - Android
-  - Kotlin
-  - 架构
-  - 协程
-  - Flow
+  - "Android"
+  - "Kotlin"
+  - "架构"
+  - "协程"
+  - "Flow"
 draft: false
-description: 一次范式转变：语言、数据、UI、架构、工程五个层面的演进。
+description: "一次范式转变：语言、数据、UI、架构、工程五个层面的演进。"
+model: "DeepSeek 4.1 Flash"
+tool: "WorkBuddy"
 ---
 
 ## 引子

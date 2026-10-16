@@ -2,9 +2,16 @@
 title: "一个音乐播放器的跨平台架构演进"
 slug: "hmp-cross-platform-evolution"
 date: 2026-10-10T10:00:00+08:00
-tags: ["KMP", "Compose Multiplatform", "跨平台", "架构", "个人项目"]
+tags:
+  - "KMP"
+  - "Compose Multiplatform"
+  - "跨平台"
+  - "架构"
+  - "个人项目"
 draft: false
 description: "HMP 个人项目的跨平台架构演进实录：从单模块 Android 到一套 Compose Multiplatform 代码跑在 Android、iOS、Desktop。"
+model: "DeepSeek 4.1 Flash"
+tool: "WorkBuddy"
 ---
 
 ## 引子
