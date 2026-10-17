@@ -6,7 +6,7 @@
     </marker>
   </defs>
   <g font-family="-apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif">
-    <text x="24" y="34" font-size="13" font-weight="600" fill="#8a857e" letter-spacing=".06em">图 2</text>
+    <text x="24" y="34" font-size="13" font-weight="600" fill="#8a857e" letter-spacing=".06em">图 3</text>
     <text x="64" y="34" font-size="13" fill="#8a857e" letter-spacing=".02em">自动重组的本质：连接关系由编译器推导，不由开发者注册</text>
 
     <!-- 传统范式 -->

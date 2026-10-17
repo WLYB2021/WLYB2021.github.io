@@ -1,41 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 358" width="760" height="358" role="img" aria-label="单向数据流：UI 事件上抛，状态向下回流">
-  <rect x="0.5" y="0.5" width="759" height="357" rx="10" fill="#fbfaf8" stroke="#e8e4de"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" width="760" height="360" role="img" aria-label="单向数据流：事件从 UI 向上到 ViewModel，状态向下回到 UI">
+  <rect x="0.5" y="0.5" width="759" height="359" rx="10" fill="#fbfaf8" stroke="#e8e4de"/>
   <defs>
-    <marker id="ma3ArwUp" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
-      <path d="M0 9 L9 0 L0 4.5 z" fill="#b03a2e"/>
-    </marker>
-    <marker id="ma3ArwDown" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
-      <path d="M0 0 L9 4.5 L0 9 z" fill="#b03a2e"/>
+    <marker id="udfArw" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#b03a2e"/>
     </marker>
   </defs>
   <g font-family="-apple-system, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif">
-    <text x="24" y="34" font-size="13" font-weight="600" fill="#8a857e" letter-spacing=".06em">图 3</text>
+    <text x="24" y="34" font-size="13" font-weight="600" fill="#8a857e" letter-spacing=".06em">图 5</text>
     <text x="64" y="34" font-size="13" fill="#8a857e" letter-spacing=".02em">单向数据流：事件向上，状态向下</text>
 
-    <!-- UI 层 -->
-    <rect x="150" y="62" width="500" height="52" rx="8" fill="#ffffff" stroke="#b03a2e" stroke-width="1.2"/>
-    <text x="400" y="84" font-size="13" font-weight="700" fill="#8c2f25" text-anchor="middle">UI 层</text>
-    <text x="400" y="102" font-size="11.5" fill="#6f6b66" text-anchor="middle">渲染状态 · 上抛事件（不修改状态）</text>
+    <g transform="translate(120,-30)">
+    <rect x="40" y="150" width="190" height="62" rx="8" fill="#ffffff" stroke="#ddd7cf"/>
+    <text x="135" y="176" font-size="12.5" font-weight="700" fill="#2b2b2b" text-anchor="middle">数据层 · Repository</text>
+    <text x="135" y="195" font-size="11" fill="#6f6b66" text-anchor="middle">Flow / suspend</text>
 
-    <!-- 架构层 -->
-    <rect x="150" y="160" width="500" height="52" rx="8" fill="#fdf4f2" stroke="#b03a2e" stroke-width="1.3"/>
-    <text x="400" y="182" font-size="13" font-weight="700" fill="#8c2f25" text-anchor="middle">架构层 · ViewModel</text>
-    <text x="400" y="200" font-size="11.5" fill="#6f6b66" text-anchor="middle">持有单一 StateFlow&lt;UiState&gt; · 处理事件</text>
+    <rect x="280" y="150" width="200" height="62" rx="8" fill="#fdf4f2" stroke="#b03a2e" stroke-width="1.3"/>
+    <text x="380" y="176" font-size="12.5" font-weight="700" fill="#8c2f25" text-anchor="middle">ViewModel</text>
+    <text x="380" y="195" font-size="11" fill="#6f6b66" text-anchor="middle">单一 StateFlow&lt;UiState&gt;</text>
 
-    <!-- 数据层 -->
-    <rect x="150" y="258" width="500" height="52" rx="8" fill="#ffffff" stroke="#ddd7cf"/>
-    <text x="400" y="280" font-size="13" font-weight="700" fill="#2b2b2b" text-anchor="middle">数据层 · Repository</text>
-    <text x="400" y="298" font-size="11.5" fill="#6f6b66" text-anchor="middle">暴露 Flow / suspend 函数（不关心 UI）</text>
+    <rect x="280" y="266" width="200" height="62" rx="8" fill="#ffffff" stroke="#b03a2e" stroke-width="1.2"/>
+    <text x="380" y="292" font-size="12.5" font-weight="700" fill="#8c2f25" text-anchor="middle">UI 层</text>
+    <text x="380" y="311" font-size="11" fill="#6f6b66" text-anchor="middle">渲染状态 · 上抛事件</text>
 
-    <!-- 上：事件 -->
-    <path d="M110 310 V84" stroke="#b03a2e" stroke-width="1.6" fill="none" marker-end="url(#ma3ArwUp)"/>
-    <text x="24" y="200" font-size="12" fill="#b03a2e" transform="rotate(-90 24 200)">事件上抛</text>
+    <path d="M234 181 H274" stroke="#b03a2e" stroke-width="1.5" fill="none" marker-end="url(#udfArw)"/>
+    <text x="238" y="170" font-size="11.5" fill="#8c2f25">Flow</text>
 
-    <!-- 下：状态 -->
-    <path d="M690 84 V310" stroke="#b03a2e" stroke-width="1.6" fill="none" marker-end="url(#ma3ArwDown)"/>
-    <text x="736" y="200" font-size="12" fill="#b03a2e" transform="rotate(90 736 200)">状态回流</text>
+    <path d="M322 262 V216" stroke="#b03a2e" stroke-width="1.5" fill="none" marker-end="url(#udfArw)"/>
+    <text x="330" y="242" font-size="11.5" fill="#8c2f25">事件</text>
 
-    <line x1="24" y1="322" x2="736" y2="322" stroke="#e8e4de"/>
-    <text x="24" y="346" font-size="12.5" fill="#2b2b2b" dx="0">ViewModel 不直接操作 UI，UI 不修改状态；状态变化自动驱动重组。</text>
+    <path d="M438 216 V262" stroke="#b03a2e" stroke-width="1.5" fill="none" marker-end="url(#udfArw)"/>
+    <text x="446" y="242" font-size="11.5" fill="#8c2f25">状态</text>
+
+    </g>
+
+    <line x1="24" y1="318" x2="736" y2="318" stroke="#e8e4de"/>
+    <text x="24" y="344" font-size="12.5" fill="#2b2b2b">UI 不修改状态，ViewModel 不直接操作 UI；状态一变，读它的界面跟着重画。</text>
   </g>
 </svg>
