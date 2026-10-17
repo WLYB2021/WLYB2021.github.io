@@ -1,0 +1,15 @@
+{{- /*
+  搜索索引（覆盖主题同名模板）
+  ---------------------------------------------------------------
+  主题版用 $.Scratch 累积条目：在 `hugo server` 的增量重建里，Scratch
+  不会清空，索引会随着每次改文件不断变长（本地预览时「共 N 篇可搜」
+  会越滚越大）。这里改成局部变量累积，每次渲染都是干净的。
+  另外只收 mainSections（posts）：关于页之类的静态页不进搜索。
+*/ -}}
+{{- $index := slice -}}
+{{- range where site.RegularPages "Type" "in" site.Params.mainSections -}}
+  {{- if ne .Layout "archives" -}}
+    {{- $index = $index | append (dict "title" .Title "content" .Plain "permalink" .Permalink "summary" .Summary) -}}
+  {{- end -}}
+{{- end -}}
+{{- $index | jsonify -}}

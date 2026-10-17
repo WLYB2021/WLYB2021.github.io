@@ -79,13 +79,40 @@
      这里显式定义，并给出深色模式覆盖（见下方 .dark 块）。 */
   --secondary-text: var(--secondary);   /* 次要文字：跟随主题灰 */
   --accent: #b03a2e;                    /* 强调色（砖红，编辑风常用） */
+  --accent-weak: rgba(176, 58, 46, .08); /* 强调色的淡底：目录当前项等 */
   --code-font: "SFMono-Regular", ui-monospace, "Cascadia Mono", Consolas,
                "Liberation Mono", Menlo, "DejaVu Sans Mono", monospace;
+
+  /* ---------- 正文配图 ----------
+     图里的颜色写成 var()，SVG 内联进页面后由这里决定。
+     浅色沿用原来的纸感配色，深色换成低亮度的卡片与提亮过的强调色。 */
+  --fig-bg: #fbfaf8;
+  --fig-card: #ffffff;
+  --fig-border: #e8e4de;
+  --fig-line: #ddd7cf;
+  --fig-text: #2b2b2b;
+  --fig-muted: #6f6b66;
+  --fig-faint: #8a857e;
+  --fig-accent: #b03a2e;
+  --fig-accent-strong: #8c2f25;
+  --fig-accent-bg: #fdf4f2;
 }
 
 /* 深色模式：强调色提亮，保证在深底上可读 */
 .dark {
   --accent: #e0785f;
+  --accent-weak: rgba(224, 120, 95, .14);
+
+  --fig-bg: #1b1d21;
+  --fig-card: #23262b;
+  --fig-border: #2f333a;
+  --fig-line: #3b4048;
+  --fig-text: #d9d5cd;
+  --fig-muted: #9b968e;
+  --fig-faint: #7e7972;
+  --fig-accent: #e0785f;
+  --fig-accent-strong: #f0947f;
+  --fig-accent-bg: #2b1f1c;
 }
 
 
@@ -620,10 +647,13 @@ body.dark .ed-icon-sun { display: block; }
   color: var(--accent);
   border-left-color: var(--accent);
 }
+/* 当前阅读位置：用强调色 + 淡底标出来，不再加粗。
+   目录第一层（h2）本身已经是 600，再加粗等于没变化，反而找不到。 */
 .ed-single .ed-rail .toc .toc-list a.toc-active {
-  color: var(--primary);
-  font-weight: 600;
+  color: var(--accent);
   border-left-color: var(--accent);
+  background: var(--accent-weak);
+  border-radius: 0 3px 3px 0;
 }
 /* 末项去掉底部内边距：目录独立滚动时，这 5px 会白白占掉可视高度，
    使最后一项永远差一点点才算"完整可见"。 */
@@ -897,9 +927,8 @@ body.ed-toc-lock { overflow: hidden; }
 .ed-card-body {
   min-width: 0;
   max-width: var(--ed-measure-max);
-  /* 三段式竖直布局：标题贴顶、元信息贴底、摘要占据中间剩余空间。
-     卡片总高 = 标题(固定 2 行) + 摘要(至少 3 行) + 元信息(3 行)，
-     三者高度都由行数定死，所以每张卡片等高、内部基线互相对齐。 */
+  /* 三段式竖直布局：标题、摘要、元信息。等高与固定行数只在首页并排卡片
+     上启用（见 .ed-cards--pair 段），列表页与归档页是单列，高度随内容走。 */
   display: flex;
   flex-direction: column;
 }
@@ -911,13 +940,6 @@ body.ed-toc-lock { overflow: hidden; }
   margin: 0 0 var(--ed-space-xs);
   color: var(--primary);
   transition: color .22s ease;
-  /* 固定占 2 行：高度写死，保证标题顶端对齐、下方元素起于同一基线 */
-  flex: none;
-  height: calc(1.26em * 2);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 .ed-card:hover .ed-card-title { color: var(--accent); }
 /* 摘要容器：吃掉标题与元信息之间的全部剩余空间，内容在其中垂直居中。
@@ -927,21 +949,8 @@ body.ed-toc-lock { overflow: hidden; }
   line-height: 1.7;
   color: var(--secondary-text);
   margin: 0 0 var(--ed-space-sm);
-  flex: 1 1 auto;
-  min-height: calc(1.7em * 3);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
 }
-/* 摘要正文：最多 3 行，超出截断 */
-.ed-card-desc > p {
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+.ed-card-desc > p { margin: 0; }
 .ed-card-meta {
   font-size: .8rem;
   line-height: 1.5;
@@ -960,6 +969,15 @@ body.ed-toc-lock { overflow: hidden; }
 /* 两段之间补一点行间距，避免高行高下贴得太近 */
 .ed-meta-line + .ed-meta-line {
   margin-top: 2px;
+}
+
+/* 署名里的模型 / 工具小图标（layouts/partials/ai_icon.html） */
+.ai-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-right: .3em;
+  opacity: .7;
 }
 
 /* ---------- 首页并排卡片（.ed-cards--pair） ----------
@@ -993,6 +1011,30 @@ body.ed-toc-lock { overflow: hidden; }
 .ed-cards--pair .ed-card:hover {
   padding-left: var(--ed-space-md);
   border-color: var(--accent);
+}
+/* 并排卡片才需要「等高 + 固定行数」：标题固定 2 行、摘要至少 3 行，
+   两列的内部基线才能对齐。单列页面不加这些限制，高度由内容决定。 */
+.ed-cards--pair .ed-card-title {
+  flex: none;
+  height: calc(1.26em * 2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ed-cards--pair .ed-card-desc {
+  flex: 1 1 auto;
+  min-height: calc(1.7em * 3);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+.ed-cards--pair .ed-card-desc > p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* "查看全部文章 →"：卡片流之后的下一步入口 */
@@ -1504,6 +1546,17 @@ body.ed-shell-body { background: var(--theme); }
     overflow-x: auto;
     white-space: nowrap;
   }
+}
+
+/* 正文配图：SVG 由 render-image 钩子内联，颜色跟随 .light / .dark 的变量 */
+.ed-single .post-content .ed-figure {
+  margin: 1.8em 0;
+}
+.ed-single .post-content .ed-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
 }
 
 /* 图片：圆角 + 居中，窄屏不撑破正文列 */

@@ -8,6 +8,8 @@
 
 # 本地环境
 .hugo_build.lock
+# 本地下载的 Hugo 可执行文件（免去系统级安装）
+/.tools/
 *.bat
 *.log
 
@@ -23,3 +25,6 @@ Thumbs.db
 
 # 临时备份（DSH 会话产物）
 /.dsh-backup/
+
+# DSH 项目目录（只放本地软链，内容在 docs/skills/）
+/.dsh/

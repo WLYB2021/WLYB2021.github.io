@@ -9,6 +9,9 @@ tags:
   - "架构"
 draft: false
 description: "从协程到构建检查，这些变化看着各改各的，其实是同一件事：把「什么时候读、什么时候停、由谁保证」从调用方手里拿走。"
+author: "Xi"
+model: "DeepSeek 4.1 Flash"
+tool: "DeepSeek Harness"
 ---
 
 ## 引子
@@ -29,7 +32,7 @@ description: "从协程到构建检查，这些变化看着各改各的，其实
 
 ### 1.1 回调里的取消，是一个布尔量
 
-Java 时代的异步样板大致这样：`new Thread()` 里发请求，结果到了用 `handler.post { title.text = ... }` 回主线程。后来有了 `AsyncTask`，把 `doInBackground` 和 `onPostExecute` 分开，API 30 又把它弃用了。
+Java 时代的异步样板大致这样：`new Thread()` 里发请求，结果到了用 `handler.post { title.text = ... }` 回主线程。后来有了 `AsyncTask`，把 `doInBackground` 和 `onPostExecute` 分开，[API 30 起废弃](https://developer.android.google.cn/reference/android/os/AsyncTask)。
 
 ```java
 new Thread(() -> {
@@ -93,11 +96,11 @@ Flow 默认是冷的。`flow { }` 里那段代码在订阅之前一行都不执�
 
 ### 2.2 Room 和 DataStore 把返回值换成了流
 
-Room 换掉的是 `SQLiteOpenHelper` 加手写 `Cursor`，把 SQL 校验挪到编译期。2.2 起 `@Query` 可以直接返回 `Flow<List<Song>>`；表被写时 `InvalidationTracker` 重跑查询，把新结果发下去。
+Room 换掉的是 `SQLiteOpenHelper` 加手写 `Cursor`，把 SQL 校验挪到编译期。[2.2 起](https://developer.android.google.cn/jetpack/androidx/releases/room) `@Query` 可以直接返回 `Flow<List<Song>>`；表被写时 `InvalidationTracker` 重跑查询，把新结果发下去。
 
-DataStore 换掉的是 SharedPreferences 的同步读写和 `getAll()` 那种全量快照。它异步、事务性，偏好读出来是 `Flow<Preferences>`，写入是 `suspend edit { }`。
+[DataStore](https://developer.android.google.cn/jetpack/androidx/releases/datastore) 换掉的是 SharedPreferences 的同步读写和 `getAll()` 那种全量快照。它异步、事务性，偏好读出来是 `Flow<Preferences>`，写入是 `suspend edit { }`。
 
-Retrofit 换掉的是 `HttpURLConnection` 加手写解析。它只走到 `suspend`：2.6.0 起方法能标 `suspend`，返回值仍是一次性的，要变成流得自己包一层。
+Retrofit 换掉的是 `HttpURLConnection` 加手写解析。它只走到 `suspend`：[2.6.0 起](https://github.com/square/retrofit/blob/8c2b181ee0127c5f0ee4c93f47e1185119311602/CHANGELOG.md) 方法能标 `suspend`，返回值仍是一次性的，要变成流得自己包一层。
 
 **表 1**　三个数据源各自的「流」停在哪一层
 
@@ -168,7 +171,7 @@ fun SongList(state: ListUiState) {
 
 ### 3.3 重组跳过不跳过，取决于稳定性
 
-编译器推断的是类型的稳定性，不是参数的。`List<T>` 被判为不稳定，因为接口的实现可能是 `MutableList`：参数类型里带 `List<Song>`，编译器就不敢跳过这个函数。换成 `ImmutableList`，或者把这个类型标注成 `@Immutable`（注解加在类型上，不是加在参数上），它才敢跳。开了 strong skipping 之后规则有例外，但集合仍然是最常见的坑。
+编译器推断的是类型的稳定性，不是参数的。`List<T>` 被判为不稳定，因为接口的实现可能是 `MutableList`：参数类型里带 `List<Song>`，编译器就不敢跳过这个函数。换成 `ImmutableList`，或者把这个类型标注成 `@Immutable`（注解加在类型上，不是加在参数上），它才敢跳。开了 [strong skipping](https://developer.android.google.cn/develop/ui/compose/performance/stability/strongskipping) 之后规则有例外，但集合仍然是最常见的坑。
 
 把 `List` 换成 `ImmutableList` 常被当成性能技巧，它实际影响的是重组的判定条件。写 Compose 时遇到的「明明没变却重新跑」，先查这里。
 
@@ -200,7 +203,7 @@ Navigation 2.8 起可以用 `@Serializable` 的对象当 route，把这类错误
 
 ### 4.3 Navigation 3 把栈交给调用方持有
 
-Navigation 3 是 2025 年 11 月发布稳定版的下一代导航库。它把返回栈变成一个由调用方持有的列表，`NavDisplay` 读这个列表渲染。换掉的是「栈的所有权在库内部」这件事。
+Navigation 3 是 2025 年 11 月[发布稳定版](https://developer.android.google.cn/jetpack/androidx/releases/navigation3)的下一代导航库。它把返回栈变成一个由调用方持有的列表，`NavDisplay` 读这个列表渲染。换掉的是「栈的所有权在库内部」这件事。
 
 栈变成 Compose 的可观察列表 `SnapshotStateList` 之后，能断言的东西多了：长度、当前 key 都是普通值。`rememberNavBackStack` 自带 saver，转屏和进程恢复都能把它存下来。它还能被两个 pane 同时读：列表 pane 读整条栈，详情 pane 读最后一项。
 
@@ -301,7 +304,7 @@ fun onAction(action: HomeAction) {
 
 ### 6.2 多模块把依赖变成构建图上的边
 
-多模块工程把代码切成 `:feature:player`、`:core:data`、`:core:model`，模块之间的依赖写在 Gradle 里。`implementation` 的依赖不传递给下游，`api` 会——上游用 `api` 暴露的类型，下游不声明也能看见。`internal` 把可见性收到模块内，跨模块引用直接编译不过。
+多模块工程把代码切成 `:feature:player`、`:core:data`、`:core:model`，模块之间的依赖写在 Gradle 里。[`implementation` 的依赖不传递给下游](https://docs.gradle.org/current/userguide/java_library_plugin.html)，`api` 会——上游用 `api` 暴露的类型，下游不声明也能看见。`internal` 把可见性收到模块内，跨模块引用直接编译不过。
 
 要注意它管到哪：Gradle 检查的是「声明没声明」和「成不成环」，不检查方向合不合你的分层。`:core:data` 依赖 `:feature:player`，只要写了就能编过。方向是设计出来的，Gradle 只保证它一旦写下来，就不能被偷偷绕过去。
 
@@ -315,7 +318,7 @@ dependencies {
 
 ### 6.3 Hilt 把依赖图挪到编译期
 
-Hilt 是基于 Dagger 的依赖注入框架，在编译期生成依赖图，用注解声明谁提供、谁需要。它换掉的是手写单例、`object` 工具类和 ServiceLocator。后者的 `get()` 在测试里要手动替换，Hilt 换一个 binding 就行。
+[Hilt](https://developer.android.google.cn/training/dependency-injection/hilt-android) 是基于 Dagger 的依赖注入框架，在编译期生成依赖图，用注解声明谁提供、谁需要。它换掉的是手写单例、`object` 工具类和 ServiceLocator。后者的 `get()` 在测试里要手动替换，Hilt 换一个 binding 就行。
 
 `@HiltAndroidApp` 生成应用级组件，`@Inject constructor` 标出提供方。ViewModel 那边加 `@HiltViewModel` 和 `hiltViewModel()`，不用再写 Factory。
 
@@ -334,3 +337,19 @@ Hilt 是基于 Dagger 的依赖注入框架，在编译期生成依赖图，用�
 所以它不是可以整体采纳的套餐，而是一串独立的决定。一个人维护、三个月的项目，模块化和 Hilt 换不回学习成本；多人并行、边界开始被踩、构建时间成为日常阻塞，机制才开始值钱。
 
 控制权交出去之后，人剩下的工作在最上游：把状态切成什么样。切错了，后面几层只是把错误传播得更整齐。
+
+## 参考
+
+文中涉及的版本与 API 行为，以下列官方文档为准（访问日期均为 2026-10-17）：
+
+1. [AsyncTask](https://developer.android.google.cn/reference/android/os/AsyncTask) — Android Developers（API 30 起废弃）
+2. [Lifecycle release notes](https://developer.android.google.cn/jetpack/androidx/releases/lifecycle) — Android Developers（2.4.0 起提供 `repeatOnLifecycle`）
+3. [DataStore release notes](https://developer.android.google.cn/jetpack/androidx/releases/datastore) — Android Developers（1.0.0，2021-08）
+4. [Room release notes](https://developer.android.google.cn/jetpack/androidx/releases/room) — Android Developers（2.2 起支持 `Flow` 返回类型）
+5. [Retrofit CHANGELOG](https://github.com/square/retrofit/blob/8c2b181ee0127c5f0ee4c93f47e1185119311602/CHANGELOG.md) — square/retrofit（2.6.0 起支持 `suspend`）
+6. [Stability in Compose](https://developer.android.google.cn/develop/ui/compose/performance/stability) — Android Developers
+7. [Strong skipping mode](https://developer.android.google.cn/develop/ui/compose/performance/stability/strongskipping) — Android Developers
+8. [Navigation 3 release notes](https://developer.android.google.cn/jetpack/androidx/releases/navigation3) — Android Developers（1.0.0，2025-11）
+9. [Save UI states](https://developer.android.google.cn/topic/libraries/architecture/saving-states) — Android Developers
+10. [Hilt](https://developer.android.google.cn/training/dependency-injection/hilt-android) — Android Developers
+11. [Java Library plugin](https://docs.gradle.org/current/userguide/java_library_plugin.html) — Gradle（`api` 与 `implementation` 的可见性差别）

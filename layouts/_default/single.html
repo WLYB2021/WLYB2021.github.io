@@ -239,9 +239,10 @@
     }
 
     // 目录高亮锚点：标题顶边越过该线即算"当前"。
-    // 与顶部留白（--ed-top: 24px）保持同一量级，
-    // 取值略大以免标题刚露头就跳高亮。
-    var OFFSET = 72;
+    // 必须大于等于正文标题的 scroll-margin-top（88px，见 custom.css）——
+    // 点击目录跳转时，目标标题停在离顶 88px 处；若门槛小于它，
+    // 刚跳过去的标题不算"已越过"，高亮会落在上一项。
+    var OFFSET = 96;
     function spy() {
       if (!headings.length) return;
       var current = headings[0];

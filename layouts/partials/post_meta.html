@@ -55,8 +55,8 @@
 {{- with $href }}{{ $authorHTML = printf "<a href=\"%s\">%s</a>" . $names }}{{ end -}}
 {{- $credit = $credit | append $authorHTML -}}
 {{- end -}}
-{{- with (.Param "model") }}{{ $credit = $credit | append (printf "CoWith %s" .) }}{{ end -}}
-{{- with (.Param "tool") }}{{ $credit = $credit | append (printf "Use %s" .) }}{{ end -}}
+{{- with (.Param "model") }}{{ $credit = $credit | append (printf "%s%s" (partial "ai_icon.html" (dict "kind" "model" "name" .)) .) }}{{ end -}}
+{{- with (.Param "tool") }}{{ $credit = $credit | append (printf "%s%s" (partial "ai_icon.html" (dict "kind" "tool" "name" .)) .) }}{{ end -}}
 {{- end -}}
 
 {{- with ($scratch.Get "line1") -}}
@@ -66,5 +66,5 @@
 <div class="ed-meta-line">{{ delimit . "&nbsp;·&nbsp;" | safeHTML }}</div>
 {{- end -}}
 {{- with $credit -}}
-<div class="ed-meta-line ed-meta-credit">{{ delimit . ", " | safeHTML }}</div>
+<div class="ed-meta-line ed-meta-credit">{{ delimit . "&nbsp;·&nbsp;" | safeHTML }}</div>
 {{- end -}}

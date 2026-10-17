@@ -48,6 +48,11 @@
 │   ├── apple-touch-icon.png      # iOS 加主屏（180×180，不透明；主题 <link> 默认取这个名字）
 │   ├── safari-pinned-tab.svg     # Safari 固定标签页（单色剪影，evenodd 挖空字形）
 │   └── images/og-default.png     # 分享卡片默认图 1200×630
+├── docs/
+│   ├── maintenance.md            # 维护细节（本文件）
+│   ├── publishing.md             # 发布流程
+│   ├── typography.md             # 排版规范
+│   └── skills/xi-writing/        # 写作 skill（人格 / 语言风格 / brief 模板）
 ├── scripts/
 │   ├── dev.sh                    # 本地一键预览（克隆主题 + 补丁 + hugo server）
 │   └── patch-theme.sh            # PaperMod v8.0 在新版 Hugo 下的兼容补丁（幂等）
@@ -56,6 +61,12 @@
 ```
 
 > 版式与主题强耦合：自定义模板直接调用多个主题 partial。不要把这套 layouts 当通用模板用。
+
+写作 skill 的内容在 `docs/skills/xi-writing/`，随仓库版本化。DSH 从项目根的 `.dsh/skills/` 读技能，本地用软链挂过去即可（`.dsh/` 不入库）：
+
+```sh
+mkdir -p .dsh/skills && ln -sfn ../../docs/skills/xi-writing .dsh/skills/xi-writing
+```
 
 ## 本地预览（手动方式）
 

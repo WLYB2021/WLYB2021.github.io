@@ -20,6 +20,14 @@
   {{- end -}}
 {{- end -}}
 
+{{- /* 本地 SVG 直接内联：图里的颜色写成 var(--fig-*)，才能跟随明暗模式。
+       其它图片仍走 <img>，保留懒加载与宽高防 CLS。 */ -}}
+{{- $isLocalSvg := and (not $u.IsAbs) (strings.HasSuffix (lower $u.Path) ".svg") -}}
+{{- $file := printf "static%s" $u.Path -}}
+{{- if and $isLocalSvg (fileExists $file) -}}
+<figure class="ed-figure">{{ readFile $file | safeHTML }}</figure>
+{{- else -}}
 <img loading="lazy" decoding="async" src="{{ .Destination | safeURL }}" alt="{{ .Text }}"
   {{- with .Title }} title="{{ . }}"{{ end }}
   {{- with $img }} width="{{ .Width }}" height="{{ .Height }}"{{ end }} />
+{{- end -}}

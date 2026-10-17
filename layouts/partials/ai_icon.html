@@ -1,0 +1,23 @@
+{{- /* 模型 / 工具的小图标。
+  用法：partial "ai_icon.html" (dict "kind" "model" "name" "DeepSeek Flash")
+  图标放在 ai_icons/ 目录：官方品牌用 lobe-icons 的 SVG，没有官方标的用自绘兜底。
+  按名字里的关键词匹配；匹配不到用默认（模型=芯片，工具=齿轮）。 */ -}}
+{{- $name := lower (string .name) -}}
+{{- $key := "model-default" -}}
+{{- if eq .kind "model" -}}
+  {{- if in $name "deepseek" }}{{ $key = "deepseek" }}
+  {{- else if or (in $name "gpt") (in $name "openai") }}{{ $key = "openai" }}
+  {{- else if in $name "codex" }}{{ $key = "codex" }}
+  {{- else if in $name "claude" }}{{ $key = "claude" }}
+  {{- else if in $name "anthropic" }}{{ $key = "anthropic" }}
+  {{- else if in $name "gemini" }}{{ $key = "gemini" }}
+  {{- end -}}
+{{- else -}}
+  {{- $key = "tool-default" -}}
+  {{- if in $name "harness" }}{{ $key = "harness" }}
+  {{- else if in $name "workbuddy" }}{{ $key = "workbuddy" }}
+  {{- else if in $name "cursor" }}{{ $key = "cursor" }}
+  {{- else if in $name "codex" }}{{ $key = "codex" }}
+  {{- end -}}
+{{- end -}}
+{{- readFile (printf "layouts/partials/ai_icons/%s.svg" $key) | strings.TrimSpace | safeHTML -}}
