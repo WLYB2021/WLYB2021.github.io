@@ -9,6 +9,11 @@
   找不到尺寸时（外链图）安全降级为不带宽高，行为与主题一致。
 */ -}}
 {{- $u := urls.Parse .Destination -}}
+{{- $w := 0 -}}
+{{- $rawW := $u.Query.Get "w" -}}
+{{- if findRE `^[0-9]+$` $rawW -}}
+  {{- $w = int $rawW -}}
+{{- end -}}
 {{- $img := "" -}}
 {{- if not $u.IsAbs -}}
   {{- $path := strings.TrimPrefix "./" $u.Path -}}
@@ -21,11 +26,12 @@
 {{- end -}}
 
 {{- /* 本地 SVG 直接内联：图里的颜色写成 var(--fig-*)，才能跟随明暗模式。
-       其它图片仍走 <img>，保留懒加载与宽高防 CLS。 */ -}}
+       其它图片仍走 <img>，保留懒加载与宽高防 CLS。
+       本地 SVG 可在目标地址后加 ?w=720 控制最大显示宽度；默认铺满正文列。 */ -}}
 {{- $isLocalSvg := and (not $u.IsAbs) (strings.HasSuffix (lower $u.Path) ".svg") -}}
 {{- $file := printf "static%s" $u.Path -}}
 {{- if and $isLocalSvg (fileExists $file) -}}
-<figure class="ed-figure">{{ readFile $file | safeHTML }}</figure>
+<figure class="ed-figure"{{ if and (ge $w 320) (le $w 960) }} style="max-width: {{ $w }}px; margin-left: auto; margin-right: auto;"{{ end }}>{{ readFile $file | safeHTML }}</figure>
 {{- else -}}
 <img loading="lazy" decoding="async" src="{{ .Destination | safeURL }}" alt="{{ .Text }}"
   {{- with .Title }} title="{{ . }}"{{ end }}

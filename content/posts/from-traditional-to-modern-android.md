@@ -1,5 +1,5 @@
 ---
-title: "从传统到现代：Android 应用开发范式的演变"
+title: "从页面到数据流：Android 应用开发范式的演变"
 slug: "from-traditional-to-modern-android"
 date: 2026-10-17T10:00:00+08:00
 tags:
@@ -7,349 +7,303 @@ tags:
   - "Kotlin"
   - "Jetpack Compose"
   - "架构"
+  - "数据流"
 draft: false
-description: "从协程到构建检查，这些变化看着各改各的，其实是同一件事：把「什么时候读、什么时候停、由谁保证」从调用方手里拿走。"
+description: "一次删除之后，列表怎样知道数据变了？数据流的价值，在于把读取、状态、渲染与写回的同步责任放到了可观察、可约束的位置。"
 author: "Xi"
 model: "DeepSeek 4.1 Flash"
-tool: "DeepSeek Harness"
+tool: "WorkBuddy"
 ---
 
-## 引子
+## 引子：一次删除之后
 
-从详情页返回列表，刚删掉的那条还在。下拉刷新一下，它没了；再进详情、再返回，它又可能回来。操作再快一点，删除和刷新几乎同时发出，谁先落地也不一定。
+在详情页删掉一首歌，返回列表，界面接下来怎样更新？数据库已经变了，列表要怎样知道？这个再普通不过的动作，藏着应用最基本的一组关系：数据在哪里，谁在使用它，变化怎样到达界面。
 
-这类 bug 很难指到哪一行：数据库删成功了，列表页手里那份没变。同一份数据存在三个地方——列表页的字段、数据库、详情页回传的结果——谁最后写，界面就显示谁。这里说的「状态」指三样：界面要显示的值、正在发生的事、以及两者落定的先后。
+一种做法由页面推进：详情页回传删除结果，列表收到后重查；或者列表每次恢复可见时，都重新查询。另一种做法是让列表持续观察数据，详情页只负责删除，新结果沿观察关系到达界面。两种做法都能完成更新，差别在于同步由页面推动，还是由数据流完成。
 
-这不是一次手误。旧写法里，状态本来就没有唯一的主人：界面一份、数据库一份、上一个页面回传一份，谁都能改，谁也不知道别人改了。要不出错，只能靠每一处都记得同步。
+更值得看的是同步责任最后落在谁手里。语言和 UI 工具包的替换只是表层，变化发生在应用的组织中心。要看清这种移动，先得看看：应用以页面为中心，还是以数据流为中心？
 
-换库不是范式转变；把所有权换掉才是。Android 这些年的六层变化，就是在回应这件事——把「什么时候读、什么时候停、由谁保证」，从调用方手里一点点拿走。六层依次是：语言（协程与 Flow）、数据（读取变订阅）、UI（同步变重组）、导航（栈变状态）、架构（多容器变一个入口）、工程（约定变检查）。这个 bug 只是其中一种症状：状态没有唯一的主人，会有六种失控——任务没人负责停、值没人负责更新、界面没人负责同步、当前位置没人负责持有、写入没人负责收口、依赖没人负责检查。六层各管一种。
+## 一、应用的中心，是页面还是数据流
 
-判断有没有真的转变，只看一条：原来必须靠人记住的东西，还剩多少。
+页面当然是应用的组成部分。用户看到的是列表页和详情页，系统把生命周期交给的，也是 Activity 和 Fragment。
 
-## 一、语言：取消权从回调里被拿走
+以页面为中心组织代码，因此是一种很自然的选择：列表页查询歌曲、保存结果、显示列表，详情页接收点击、执行删除，再把结果带回来。页面既是用户操作的入口，也是各项工作的协调者。
 
-这一层排在前面，因为它给的是后面五层要用的语言设施：协程负责「什么时候停」，Flow 负责「值什么时候到」。它不解决状态存在哪，但没有它，后面几层都无从谈起。
+MVP 和 MVVM 把其中一些职责分了出去。Presenter 可以处理业务逻辑，ViewModel 则是配置变更之间持续存活的状态持有者。但如果何时重读、怎样刷新、如何通知另一个页面仍由界面层逐项安排，应用的组织中心就没有根本移动。架构名称变了，页面之间的调用关系还可以保持原样。
 
-### 1.1 回调里的取消，是一个布尔量
+从数据流看，同一个应用会呈现出另一幅结构。数据库是歌曲数据的来源，Repository 规定读取和写入的入口，ViewModel 把数据转换成界面状态，UI 显示状态并上抛事件。删除不再主要是“详情页通知列表页”的一次页面协作，而是沿既有路径完成的一次往返：
 
-Java 时代的异步样板大致这样：`new Thread()` 里发请求，结果到了用 `handler.post { title.text = ... }` 回主线程。后来有了 `AsyncTask`，把 `doInBackground` 和 `onPostExecute` 分开，[API 30 起废弃](https://developer.android.google.cn/reference/android/os/AsyncTask)。
+![页面中心由调用串联数据与界面，数据流中心让数据沿固定关系到达界面，事件再返回数据层](/images/modern-android/page-vs-dataflow.svg?w=760)
 
-```java
-new Thread(() -> {
-    List<Song> songs = api.songs();
-    handler.post(() -> adapter.submitList(songs));
-}).start();
-```
+这张图没有让页面消失，也没有让 Activity、Fragment 失去作用。页面仍然承载生命周期、导航和平台交互，只是不再天然拥有所有数据与同步工作。列表为什么更新，答案不再藏在某次回传里，而可以从数据的来源和流向上读出来。
 
-取消在这套写法里很难看。`AsyncTask.cancel(true)` 会置上取消标记，再尝试中断工作线程；任务已经结束的话，中断也不会发生。可 `doInBackground` 里的阻塞调用不一定响应中断——循环得自己每轮查一次标记。
+这里说的旧范式与新范式，不是两个泾渭分明的年代，更不是合格与不合格的分界。它们描述的是两种组织重心：一种从页面出发，用调用把数据接起来；一种从数据出发，让页面成为流经的环节。接下来的几章，就沿删除流程把后一种结构逐段搭起来，同时看哪些工作仍要由页面和平台机制承担。
 
-更常见的是根本不取消。请求回来时 Activity 已经销毁，回调照跑，`title` 还指着那个已经 detach 的 View；`setText` 通常不崩，泄漏才是结果。
+## 二、数据变化以后，谁负责再读一次
 
-根子上是一个假设：一次请求占一个线程，取消等于杀掉这个线程。线程是操作系统的调度单位，每条都要预留一块栈空间，连接一多，切线程和占内存都成了负担。而一次请求的大部分时间在等，占着线程什么也不干。
-
-### 1.2 协程是可挂起的计算，取消沿作用域向下传
-
-协程是 Kotlin 语言层的可挂起计算：`suspend` 函数在挂起点把续体存下来，线程回去干别的，结果到了再接着跑。它换掉的是「任务必须占住一个线程」这条绑定。
-
-**协程不绑定线程。** `Dispatchers.Main` 上的协程挂起时，主线程没有被阻塞，它只是去处理下一条消息了。
-
-![阻塞的线程被整段时间占住，挂起的协程让出线程](/images/modern-android/04-coroutine-suspend.svg)
-
-取消因此可以传播。`coroutineScope { }` 里的子协程和父协程构成层级。父取消，所有子取消；一个子抛异常，父取消其余子，再把异常抛出去。这叫结构化并发，一句话概括：作用域不结束，里面的协程不会漏掉。
-
-```kotlin
-viewModelScope.launch {
-    val songs = repository.songs()   // 挂起时不占线程
-    _state.value = Success(songs)    // ViewModel 清除时自动取消
-}
-```
-
-绑定生命周期的是作用域。`viewModelScope` 在 `onCleared()` 时取消，`lifecycleScope` 在 `DESTROYED` 时取消。收集侧还有一层：`repeatOnLifecycle(STARTED)` 让收集随页面可见性起停。
-
-lifecycle 2.4.0 起，`repeatOnLifecycle` 取代了 `launchWhenStarted`。后者只是把协程挂起，上游其实还在跑。
-
-### 1.3 Flow 交出的是值什么时候到
-
-Flow 是协程库里的数据流类型，用来表达「会来很多次的值」。它换掉的是那类回调接口：`OnSharedPreferenceChangeListener`、EventBus——它们只告诉你「变了」，不给你取消、背压和组合的手段。
-
-Flow 默认是冷的。`flow { }` 里那段代码在订阅之前一行都不执行，两个订阅者就是两遍执行。冷是特性，也是数据层要付的账。
-
-常用的两个热变体：StateFlow 永远有当前值，相同值不重复发射，`value` 可以同步读；SharedFlow 没有当前值，重放次数可配。前者换掉的是「观察者自己存最后一份值」的写法，后者换掉的是「一次性事件发两次」那类补丁。
-
-![冷流每个订阅者各跑一遍上游，热流只跑一份并共享当前值](/images/modern-android/05-cold-hot-flow.svg)
-
-取消是协作式的。`Thread.sleep`、阻塞 IO、`while (true)` 里的非挂起代码都不响应取消，得自己 `ensureActive()`。异常默认向上抛，`viewModelScope` 里没接住就是一次崩溃。`GlobalScope` 是逃生口，用了它，取消又回到手动时代。
-
-这一层交出去的是「什么时候取消、值什么时候到」。没交的是：这些值从哪来、谁能改。
-
-## 二、数据：谁负责再读一次
-
-数据层紧接语言层，因为它最好验证：改完能不能编译、查询有没有重跑，当场就能看见。界面那边改错了，要等用户点出来。
-
-### 2.1 一次查询的有效期，没有人定义
-
-旧写法里三个数据源各有一套「读一次」的接口。`SharedPreferences.getAll()` 返回快照，想跟着变就注册监听器，还得记得注销。Room 的 DAO 写 `fun all(): List<Song>`，查完就结束；Retrofit 的 `Call<T>` 加 `enqueue`，回调里拿到一份响应。
-
-三件套的默认接口都只给一次结果。监听器能补上「变了」的通知，但读值本身仍是一次快照。这默认了一个前提：读到的值在下次读之前有效。这个前提在单页面工具里成立，同一份数据一旦有第二个观察者就破了。
-
-破的具体方式：详情页删了一首歌，列表页手里还是旧的列表；后台同步往库里写新行，界面不知道；设置页改了「仅 Wi-Fi 下载」，播放页的判断还是老值。每个页面各自决定何时重读，跨页面同步最后都落到 EventBus 和静态回调上。
-
-### 2.2 Room 和 DataStore 把返回值换成了流
-
-Room 换掉的是 `SQLiteOpenHelper` 加手写 `Cursor`，把 SQL 校验挪到编译期。[2.2 起](https://developer.android.google.cn/jetpack/androidx/releases/room) `@Query` 可以直接返回 `Flow<List<Song>>`；表被写时 `InvalidationTracker` 重跑查询，把新结果发下去。
-
-[DataStore](https://developer.android.google.cn/jetpack/androidx/releases/datastore) 换掉的是 SharedPreferences 的同步读写和 `getAll()` 那种全量快照。它异步、事务性，偏好读出来是 `Flow<Preferences>`，写入是 `suspend edit { }`。
-
-Retrofit 换掉的是 `HttpURLConnection` 加手写解析。它只走到 `suspend`：[2.6.0 起](https://github.com/square/retrofit/blob/8c2b181ee0127c5f0ee4c93f47e1185119311602/CHANGELOG.md) 方法能标 `suspend`，返回值仍是一次性的，要变成流得自己包一层。
-
-**表 1**　三个数据源各自的「流」停在哪一层
-
-| 载体 | 旧接口 | 现在 | 谁负责重发 |
-| --- | --- | --- | --- |
-| 偏好 | `SharedPreferences.getAll()` | `Flow<Preferences>` | DataStore |
-| 数据库 | `fun all(): List<Song>` | `Flow<List<Song>>` | Room 的 `InvalidationTracker` |
-| 网络 | `Call<T>.enqueue` | `suspend fun`，返回一次 | 没有人，得自己接 |
-
-三件套转向流的速度不一样，原因在数据源。前两个在本机，谁改了它，库自己知道；网络没有这个能力，服务端不会通知你，流只能建在轮询或推送之上。
-
-落到代码上，这一步小得不像迁移：
+先看删除之后，列表怎样拿到新结果。一次查询可以这样写：
 
 ```kotlin
 @Query("SELECT * FROM song ORDER BY title")
-fun observeAll(): Flow<List<Song>>
-
-class SongRepository(private val dao: SongDao) {
-    fun songs(): Flow<List<Song>> = dao.observeAll()
-}
+suspend fun songs(): List<Song>
 ```
 
-### 2.3 Repository 是这一层的出口
+它返回一份完整结果，然后结束。列表页可以在每次恢复可见时调用它，也可以在收到删除通知后调用它；两种做法都直接有效。只是查询发生以后，数据库与这份结果之间没有保留下来的关系。下一次何时查询，要由调用方决定。
 
-Repository 是数据的出口：对上层只暴露两种形状，读返回流，写是 `suspend`。它把「数据从哪来」收进一个地方，换掉的是 Presenter 或 Activity 直接持有 `Dao` 和 `ApiService`、并自己决定先读缓存还是先发请求的写法。
-
-它不是一个框架类型，是一个约定。编译器不知道你有没有绕过去，只有模块边界和 review 知道。这一点到工程层会再出现一次。
-
-写用 `suspend`、读用 `Flow`，不是规律，是这个场景的选择：写要等一个结果，读要一直跟着变。想反过来也能做，只是多数页面不需要。这个选择决定了缓存、重试、刷新分别写在哪一边。
-
-### 2.4 冷流意味着每次订阅都重跑
-
-两个页面各 `collect` 一次，就是两次查询。共用结果得在有生命周期的作用域里 share，而 share 立刻带来新问题：什么时候开始、最后一个订阅者走了要不要停。这些没有默认答案，只有你写下的答案。
-
-错误处理也换了位置。`try/catch` 包在 `collect` 外面能接住上游异常，代价是整条流就此结束；`catch` 操作符只作用于上游，可以在出错时换一个值继续发，`retryWhen` 管重试。异常也不会自动冒到 UI，得显式建模进结果类型。网络层的一次失败，在这里变成一次状态迁移。
-
-## 三、UI：刷新从调用方挪到运行时
-
-数据能持续推了，界面却还在手动拉。这一层要拿走的，是「谁来同步」这件事。
-
-### 3.1 手动同步的成本在漏掉的那一处
-
-View 体系是命令式。`findViewById` 拿到引用，`title.text` 赋一次值，`progress.visibility` 手动切 `VISIBLE` 和 `GONE`。数据变了，调用方负责把每一处对应关系改一遍。
-
-这套写法假设：界面正确等于每一处修改都记得同步。成本不在写，在漏。一个页面五处要同步，漏一处，界面就停在旧值上，而且不报错。`notifyDataSetChanged()` 更省事：整表重绑，结果正确，但把「哪一行变了」这个信息扔了。
-
-状态还藏在 View 的字段里。加载中靠进度条的可见性表示，错误靠一个 `TextView` 有没有文字表示。这些值没有单一来源，也就没法被断言。
-
-### 3.2 组合函数把界面写成状态的函数
-
-Compose 是 Jetpack 的声明式 UI 工具包。它用 `@Composable` 函数描述「给定这份状态，界面长什么样」，由运行时负责让界面跟上状态。它换掉的是「拿到 View 引用、改它的属性」这套命令式接口。
-
-一个 `@Composable` 函数执行时读到的 `State<T>` 会被运行时记下来。写发生时，读过它的那部分函数被标脏，下一帧重跑，没读过的跳过。刷新不再由调用方触发，由读关系决定。
-
-![自动重组的本质：连接关系由编译器推导，不由开发者注册](/images/modern-android/02-compose-dependency.svg)
+把返回类型换成 `Flow`，关系就不一样了。`Flow` 是 Kotlin 协程中的数据流；Room 返回的查询流属于冷流，只有被收集时才执行：
 
 ```kotlin
-@Composable
-fun SongList(state: ListUiState) {
-    when (state) {
-        Loading -> CircularProgressIndicator()
-        is Success -> LazyColumn { items(state.songs) { SongRow(it) } }
+@Query("SELECT * FROM song ORDER BY title")
+fun observeSongs(): Flow<List<Song>>
+```
+
+![一次查询返回快照后关系结束，持续订阅让数据变化沿 Flow 不断到达界面](/images/modern-android/snapshot-vs-stream.svg?w=680)
+
+Room 是 Android 的 SQLite 持久化库；它的[可观察查询](https://developer.android.google.cn/training/data-storage/room/async-queries)会在相关表发生变化时重新执行查询，并向下游发出新结果。它并没有让原来的列表对象自动改变，也没有只推送被删除的那一行；发生变化的是读取方式。调用方订阅的不是一次结果，而是一条会持续产生结果的查询。
+
+于是，详情页删除歌曲时，不必知道列表页是否存在。它写入数据库，列表页如果仍在收集，就会收到重新查询得到的列表。返回时重查和删除后通知仍有各自的位置，但已不是数据库变化到达界面的唯一通路。
+
+Repository 可以把这条关系收进一个明确的数据出口：
+
+```kotlin
+class SongRepository(private val dao: SongDao) {
+    val songs: Flow<List<Song>> = dao.observeSongs()
+
+    suspend fun delete(id: Long) {
+        dao.delete(id)
     }
 }
 ```
 
-`remember` 在重组之间保住一个值。转屏要靠 `rememberSaveable` 或 ViewModel，两者的分工留到架构层。
+读取返回 `Flow`，写入使用 `suspend`。这并非通用定律，只是这个场景对读写差别的选择：读取要跟随来源变化，写入要完成一个动作。
 
-### 3.3 重组跳过不跳过，取决于稳定性
+上层不必关心列表来自 Room 还是别的本地实现，也不必在删除时另找一条页面通知链。至于缓存、刷新和重试，并不会因为接口换了形状就自动消失，它们仍要由 Repository 明确安排。
 
-编译器推断的是类型的稳定性，不是参数的。`List<T>` 被判为不稳定，因为接口的实现可能是 `MutableList`：参数类型里带 `List<Song>`，编译器就不敢跳过这个函数。换成 `ImmutableList`，或者把这个类型标注成 `@Immutable`（注解加在类型上，不是加在参数上），它才敢跳。开了 [strong skipping](https://developer.android.google.cn/develop/ui/compose/performance/stability/strongskipping) 之后规则有例外，但集合仍然是最常见的坑。
+[DataStore](https://developer.android.google.cn/topic/libraries/architecture/datastore) 与 Room 类似，可以把偏好值作为流提供。网络则不同。[Retrofit](https://github.com/square/retrofit/blob/8c2b181ee0127c5f0ee4c93f47e1185119311602/CHANGELOG.md) 的 `suspend` 请求仍然只得到一次响应；服务端不会因为它变成挂起函数，就开始向客户端推送变化。三种来源可以使用相似的流式接口，触发新结果的机制却不一样。
 
-把 `List` 换成 `ImmutableList` 常被当成性能技巧，它实际影响的是重组的判定条件。写 Compose 时遇到的「明明没变却重新跑」，先查这里。
+**表 1**　三种来源的“流”分别停在哪一层
 
-### 3.4 排查路径换了
+| 来源 | 返回形状 | 谁负责产生下一次结果 |
+| --- | --- | --- |
+| Room | `Flow<List<Song>>` | `InvalidationTracker` 在相关表变化后重跑查询 |
+| DataStore | `Flow<Preferences>` | 每次写入提交后，由 DataStore 发出新值 |
+| Retrofit | `suspend fun`，单次响应 | 没有内置重发，需要轮询、推送或缓存策略 |
 
-Compose 编译器插件进构建，编译时间变长。`@Composable` 只能被 `@Composable` 调用，回调要穿过 lambda，边界画错就来回改「状态提升」的位置。
+冷流有一个直接后果：两个收集者可能各自触发一次查询。需要共享结果时，还要决定在哪里共享、何时开始和停止。
 
-排查也更绕。View 时代断点打进去，属性就在眼前；Compose 里要看 Layout Inspector 的重组计数，判断哪个写触发了哪次读。工具能用，直觉要重建。
+`shareIn` 可以在指定作用域内复用上游，[`stateIn`](https://developer.android.google.cn/kotlin/flow/stateflow-and-sharedflow) 会进一步暴露一个带初始值的 `StateFlow`，新订阅者立即拿到当前状态。选择哪一种，不只是操作符差别，也决定了第一次订阅之前、最后一个订阅者离开之后，上游分别处于什么状态。
 
-我判断 Compose 的门槛在排查：出问题时能定位到哪一层，决定了你敢不敢拿它写复杂页面。
+数据层因此只回答了一半问题：新结果能够持续发出了，但谁来接收，接收多久，仍然悬而未决。
 
-## 四、导航：返回栈从指令变成列表
+即使结果顺利到达，它也只是一份歌曲列表。界面还要处理加载、错误和空内容，这些值不应该继续散落在各个 View 的属性里。下一步，是把数据来源转换成界面真正需要的状态。
 
-界面刷新交给了运行时，可「当前在哪一屏」还留在 `FragmentManager` 的字段里。导航是 UI 这条线的延长：同样是状态，只是换成了栈。
+## 三、界面需要的，不只是数据
 
-### 4.1 事务是命令，返回栈是副作用
+歌曲列表到达界面层以后，还不能回答几个问题：第一次进入时显示什么，读取失败时显示什么，没有歌曲时是显示空列表，还是一句提示？数据库只提供 `List<Song>`，界面却同时需要数据、进度和结果。
 
-FragmentManager 的写法是一串事务调用：`beginTransaction()`、`replace()`、`commit()`。返回栈由 FragmentManager 内部维护：`getBackStackEntryAt()` 能逐项取，`addOnBackStackChangedListener()` 能监听变化，但取到的是只读的 `BackStackEntry`，监听器也只发通知；改还是得发事务。
+这些值如果分别藏在进度条的可见性、错误文本和 Adapter 的内容里，界面状态就要靠检查一组 View 才能还原。
 
-这套模型的默认用法是：指令发出去就完了，栈由内部维护。`commit()` 是异步的，`commitNow()` 不能和 `addToBackStack` 随便混用。结果回传要 `setFragmentResultListener` 加 `Bundle`。这些都不是缺陷，是命令式事务接口的必然结果。
-
-### 4.2 可读，但栈不在你手里
-
-Navigation Compose 是 Navigation 组件在 Compose 里的版本，目的地写成 `composable("route")`，2.4.0 起可用。它换掉的是事务调用，栈的所有权没变，还在 `NavController` 里。
-
-`NavController` 把栈投影成了可观察的值：`backStack` 是一条 `StateFlow`，`currentBackStackEntryAsState()` 给当前项。能读、能断言，但增删仍然要调 `navigate()` 和 `popBackStack()`。字符串路由还带来新的错误源：参数拼错、类型不对，都是运行时才发现。
-
-Navigation 2.8 起可以用 `@Serializable` 的对象当 route，把这类错误挪回编译期。
-
-### 4.3 Navigation 3 把栈交给调用方持有
-
-Navigation 3 是 2025 年 11 月[发布稳定版](https://developer.android.google.cn/jetpack/androidx/releases/navigation3)的下一代导航库。它把返回栈变成一个由调用方持有的列表，`NavDisplay` 读这个列表渲染。换掉的是「栈的所有权在库内部」这件事。
-
-栈变成 Compose 的可观察列表 `SnapshotStateList` 之后，能断言的东西多了：长度、当前 key 都是普通值。`rememberNavBackStack` 自带 saver，转屏和进程恢复都能把它存下来。它还能被两个 pane 同时读：列表 pane 读整条栈，详情 pane 读最后一项。
+这正是 ViewModel 要接手的地方：列表仍然来自 Repository，但它还要负责列表、进度和错误之间的组合关系。先把这份组合写成一个状态：
 
 ```kotlin
-val backStack = rememberNavBackStack(Home)
-backStack.add(Detail(42))      // 打开详情
-backStack.removeLastOrNull()   // 返回
-```
-
-多栏布局在旧模型里要两套导航图来绕，这里只是两个读数。
-
-![返回栈由框架内部维护时只能发事务，Navigation 3 把栈变成调用方持有的可观察列表](/images/modern-android/06-backstack.svg)
-
-pop 也不再是内部动作：`NavDisplay` 默认会调 `onBack` 帮你 pop，但栈是你自己持有的列表，想怎么改由你写。把一个刚稳定不久的库放进主线是有风险的，我还是放了：栈从指令变状态这一步，只有它做完整了。
-
-### 4.4 系统返回的语义要自己接
-
-`NavDisplay` 默认接管返回手势和预测性返回的过渡，但 pop 之后旧目的地何时清理、何时保存状态，得自己定义。Fragment 时代那些隐式行为没有了，换来的是显式。
-
-Navigation 3 的 API 面比 Navigation Compose 小，有些事要自己做。这一层的风险是选型：栈结构一旦定下来，再换库要动所有目的地。
-
-栈有了唯一答案。可「当前在哪」只是状态的一种，页面自己的数据还散在别处。
-
-## 五、架构：分散的状态收成一个入口
-
-状态至少有四个住处：ViewModel、`remember`、返回栈、仓库缓存。四种生命周期，四个能改的地方——架构层要把它们收成一个入口。
-
-### 5.1 ViewModel 解决的是转屏后数据重来
-
-ViewModel 是跨配置变更存活的状态容器，解决转屏、分屏、字体缩放之后界面数据要重来一遍的问题。`ViewModelStore` 挂在 `ComponentActivity` 上，转屏时被留下来，真正销毁才走 `onCleared()`。
-
-它换掉的是「转屏后重新请求」这件事。`onSaveInstanceState` 加 `Bundle` 还在——它负责进程死亡后的恢复，ViewModel 不跨进程，两者互补，不互相替代。Bundle 有 `TransactionTooLargeException` 的上限，只适合少量可序列化的值。
-
-第二个收益是 `viewModelScope`，协程的取消点终于有了一个和界面生命周期对齐的位置。
-
-### 5.2 LiveData 解决的是回调打到已经销毁的 View
-
-LiveData 是生命周期感知的观察容器，解决回调打到已经销毁的 View 上的问题。`observe(owner)` 注册后，只在 owner 至少 `STARTED` 时投递，`DESTROYED` 时自动移除。它换掉的是手写 listener 加 `onDestroy` 里手动 `unregister` 的那套纪律。
-
-它的边界在「生命周期感知」。LiveData 只有一个 `value`，没有「正在加载」和「加载失败」的位置。那两个状态得靠第二个 LiveData，或者一个 `sealed class` 塞进同一个 `value`。
-
-### 5.3 MVC 到 UDF，换的都是状态放在哪
-
-MVC 把找 View、绑数据、处理点击放进同一个 Activity。MVP 拆出 Presenter，测试能脱离界面，代价是接口随页面线性增长，`attach` / `detach` 漏一次就是一次泄漏。MVVM 省掉 View 接口，代价是状态和一次性事件混在一个口——导航、Toast 要靠 `SingleLiveEvent` 这类只投一次的包装打补丁。
-
-UDF 不是第四代架构，是 MVVM 内部的一条数据流原则：一个不可变的 `UiState` 向下，事件向上，ViewModel 里把事件折成新状态。它换掉的是「多个可观察字段各自更新」这种写法。
-
-**表 2**　状态放在哪：三种架构，和加了 UDF 的 MVVM
-
-| 写法 | 状态放在哪 | UI 怎么拿到 | 主要代价 |
-| --- | --- | --- | --- |
-| MVC | Activity 的字段和 View 属性 | 直接改 View | 三件事挤在一个生命周期 |
-| MVP | Presenter | View 接口回调 | 接口随页面增长，`attach` / `detach` 手工配对 |
-| MVVM | ViewModel 里的多个 LiveData | `observe` | 状态和一次性事件混在一个口 |
-| MVVM + UDF | 一个不可变 `UiState` | `collect` 一个 StateFlow | 所有变化都要建模，事件要另找位置 |
-
-### 5.4 单一状态把一致性交给一个不可变对象
-
-MVVM 这一套暗含一个假设：状态可以分散在几个可观察容器里，只要每个都能观察就行。这个假设在两个容器同时更新时失效。
-
-两个 LiveData 分别更新，观察者收到两次投递；如果两次落在不同的帧，中间那一帧就是「列表到了、加载还没关」，界面闪一下。`MediatorLiveData` 或 `combine` 只是把合并挪了个位置，投递顺序仍然不保证。
-
-单一 `UiState` 让「一次渲染对应一个对象」成立。渲染函数拿到的是完整快照，不用判断字段之间是否自洽。
-
-界面不再能从四个地方改，只能从事件进、从状态出。
-
-```kotlin
-data class HomeUiState(
-    val items: List<Item> = emptyList(),
+data class SongListUiState(
+    val songs: List<Song> = emptyList(),
     val loading: Boolean = true,
     val error: String? = null,
 )
+```
 
-fun onAction(action: HomeAction) {
-    _state.update { reduce(it, action) }
+接下来，ViewModel 从 Repository 的流生成这个状态，并暴露为 `StateFlow`。这是一种始终持有当前值的热流，新的收集者会立即拿到最新状态：
+
+```kotlin
+class SongListViewModel(
+    private val repository: SongRepository,
+) : ViewModel() {
+    val state: StateFlow<SongListUiState> = repository.songs
+        .map { songs -> SongListUiState(songs = songs, loading = false) }
+        .catch { emit(SongListUiState(loading = false, error = it.message)) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = SongListUiState(),
+        )
 }
 ```
 
-![单向数据流：事件向上，状态向下](/images/modern-android/03-udf-flow.svg)
+`map` 把数据库结果折进界面状态，`catch` 只接住上游异常并转成新状态，`stateIn` 则把冷流变成可共享的当前值。`WhileSubscribed(5_000)` 允许最后一个收集者离开后，上游再保留五秒；旋转屏幕时，新界面通常能在这段窗口内重新订阅，而不必立刻重跑查询。这个时长是策略，不是固定答案。
 
-### 5.5 一次性事件没有天然位置
+`catch` 在发出错误状态后会结束当前上游；如果希望数据库在异常后继续送来变化，还需要重试或重建这条流。示例中的 `it.message` 也只是占位，真正显示给用户的错误仍需要映射。
 
-导航、Snackbar、Toast 只该发生一次，可它们也是「正在发生的事」。塞进 state 要带 id 去重，否则重组一次弹一次；走 `Channel` 或 `SharedFlow` 要写清重放和消费语义，否则转屏丢一次或者重放一次。
+列表变化时，UI 读到的是一份新的界面状态，而不必分别询问“列表更新了吗”“加载结束了吗”“刚才报错了吗”。需要一起使用的值，由此有了共同的落点。
 
-`data class` 的 `copy()` 样板随字段增长，大 state 每次更新都复制一遍，字段多了要拆成子 state 再 `combine`。ViewModel 不该持有 Activity 和 View；需要字符串资源时，用 `Application` 或者把文案提到 UI 层。
+这也是 ViewModel 比“又一个存放数据的类”更有意义的地方。它跨越旋转等配置变更存在，界面重建后不必把读取和转换从头再做一遍；真正销毁时，`onCleared()` 被调用，`viewModelScope` 中的任务随之取消。
 
-规矩定完了，靠什么保证？人，还是编译器。
+它不提供进程死亡后的自动恢复，需要在进程重建后恢复的小量状态，仍应交给 `SavedStateHandle` 或界面状态保存机制。[保存界面状态](https://developer.android.google.cn/topic/libraries/architecture/saving-states)因此是另一项安排，不是 ViewModel 的附属特性。
 
-## 六、工程：把约定变成检查
+LiveData 也曾把一部分同步责任从调用方手里拿出来：观察者只在合适的生命周期状态接收值，销毁后自动移除。StateFlow 则把当前值、协程组合与数据流放在同一套模型里，但收集侧仍需自己遵循界面生命周期。两者都能承载 `SongListUiState`；把多个 LiveData 简单替换成多个 StateFlow，并不会自动完成这里的状态建模。
 
-前五层改的都是运行时行为：谁取消、谁刷新、谁持有。工程层改的是另一件事——把前面那些约定，变成构建期能检查的规则。
+状态并非越集中越好。上面的 `data class` 仍允许 `loading = true` 与 `error != null` 同时出现。如果这些条件在业务上互斥，就应该进一步用密封类型限制它。把字段装进一个对象，只明确了组合的位置，不能保证组合本身合理。相反，彼此无关的小状态，也没有必要为了形式统一而塞进整个页面的状态里。
 
-### 6.1 单模块里，分层只是一组包名
+单向数据流到这里完成了前半程：Repository 提供来源，ViewModel 产生界面状态，事件则留待 UI 向上传回。它不是 MVC、MVP、MVVM 之后又一代必须套用的架构名称，而是一种更具体的约束——状态怎样下来，操作怎样回去。接下来只差把这两端接到界面上。
 
-单模块工程的典型结构是 `ui/`、`data/`、`domain/`、`util/`。依赖方向靠 code review 和口头约定，`util` 包慢慢变成什么都往里塞的地方。
+## 四、从状态到界面，再从事件写回数据
 
-这套结构假设分层可以靠自觉维持。约定失效的方式很安静：`data` 里的类 import 了 `ui` 的 Adapter，编译通过；新人复制一个文件、改个包名，依赖就反了，编译器不说话。
+有了 `SongListUiState`，View 体系可以把更新集中到一个渲染函数里。函数根据 `loading` 切换进度条，根据 `error` 设置错误文案，再把 `songs` 交给 Adapter。相比分散在各个回调里的属性修改，这已经是数据流组织方式的一部分。
 
-### 6.2 多模块把依赖变成构建图上的边
+声明式 UI 并不是单向数据流的前提。Compose 是 Android 的声明式 UI 工具包：界面由 `@Composable` 函数描述，状态改变后由运行时触发重组，不需要调用方逐项修改 View。它改变的是状态与界面之间如何衔接。
 
-多模块工程把代码切成 `:feature:player`、`:core:data`、`:core:model`，模块之间的依赖写在 Gradle 里。[`implementation` 的依赖不传递给下游](https://docs.gradle.org/current/userguide/java_library_plugin.html)，`api` 会——上游用 `api` 暴露的类型，下游不声明也能看见。`internal` 把可见性收到模块内，跨模块引用直接编译不过。
+在 Compose 侧，`StateFlow` 需要先转成组合可以读取的 `State`。[`collectAsStateWithLifecycle()`](https://developer.android.google.cn/topic/libraries/architecture/coroutines) 来自 `lifecycle-runtime-compose`。它会在界面至少进入 `STARTED` 时收集，在 `STOPPED` 时停止，避免不可见的页面继续接收更新：
 
-要注意它管到哪：Gradle 检查的是「声明没声明」和「成不成环」，不检查方向合不合你的分层。`:core:data` 依赖 `:feature:player`，只要写了就能编过。方向是设计出来的，Gradle 只保证它一旦写下来，就不能被偷偷绕过去。
+```kotlin
+@Composable
+fun SongListRoute(viewModel: SongListViewModel) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    SongListScreen(state = state, onDelete = viewModel::onDelete)
+}
+```
+
+界面本身按状态分支渲染：
+
+```kotlin
+@Composable
+fun SongListScreen(state: SongListUiState, onDelete: (Long) -> Unit) {
+    when {
+        state.loading -> CircularProgressIndicator()
+        state.error != null -> Text(state.error.orEmpty())
+        else -> LazyColumn {
+            items(state.songs, key = { it.id }) { song ->
+                SongRow(song) { onDelete(song.id) }
+            }
+        }
+    }
+}
+```
+
+调用方不再逐项发出“隐藏进度条、替换列表、清空错误”的命令。新的状态到来时，Compose 重新执行相关的组合函数，界面根据这份状态得到更新。
+
+重组也不是把整页推倒重画。组合期间读取过的状态会与当前作用域建立关系；值变化后，运行时使读过它的作用域失效，未读取该状态的部分可以跳过。界面不需要显式“订阅”某个字段，但状态放在哪个函数里、由谁读取，仍会影响重组的范围。运行时接管的是同步过程，不是状态设计。
+
+渲染只完成了数据向下的一半。用户点击删除，事件还要沿相反方向返回：
+
+```kotlin
+fun onDelete(id: Long) {
+    viewModelScope.launch {
+        repository.delete(id)
+    }
+}
+```
+
+UI 不直接操作数据库，也不需要找到列表页通知刷新。ViewModel 接收操作，Repository 完成写入，剩下的路已经在前两章铺好：
+
+![一次删除从 UI 事件写入数据库，再由会重新执行的查询生成新的 UiState 并驱动界面](/images/modern-android/delete-dataflow-loop.svg?w=720)
+
+删除与刷新由此成为同一条数据流上的输入和输出。详情页与列表页仍然可以同时存在，但详情页不必知道谁在观察歌曲，列表页也不必解释删除发生在哪个页面。新增一个显示歌曲数量的组件时，只要观察同一来源，就不必在删除流程里再增加一条专门通知。
+
+异步任务也在这条链上找到了位置。过去常见的做法，是由页面保存请求或监听器的引用，再在销毁时取消、注销。
+
+现在，`viewModelScope` 让任务的终点与 ViewModel 的清除对齐。UI 收集则可以用 [`repeatOnLifecycle(STARTED)`](https://developer.android.google.cn/topic/libraries/architecture/coroutines) 随界面状态启动和停止。收集停止以后，上游是否也停止，还取决于 `stateIn` 等共享策略，不能一概交给生命周期推断。
+
+协程并没有取消所有手动责任。取消是协作式的，阻塞调用和非挂起循环需要额外处理；删除失败也不会因为使用了 `Flow` 就自动变成合适的提示，写入结果仍要显式进入状态或事件。框架提供的是任务与数据关系的骨架，业务结果仍要由应用补全。
+
+回看开头那次删除，两种做法在这里已经可以分清楚。页面推进时，删除完成以后，由调用方决定下一步通知谁、何时重查；数据流推进时，观察关系先于删除建立，写入完成后，新结果沿它返回。两者都需要设计，也都能写对，但后者把“为什么界面会更新”变成了一条可以直接阅读的路径。
+
+## 五、数据流不是万物的容器
+
+一条清晰的数据流，很容易让人想把所有东西都装进去。但把所有东西都装进去，反而会模糊它的边界。第一个反例是返回栈：它看起来也是一种状态，真正决定行为的却是栈的所有权。
+
+### 5.1 导航也是状态，但不只是状态
+
+FragmentManager 和 NavController 也提供返回栈信息。不过栈主要保存在控制器内部，前进和返回仍通过事务或 `navigate()`、`popBackStack()` 等命令完成。能读到当前项，不等于调用方拥有整个栈。
+
+[Navigation 3](https://developer.android.google.cn/jetpack/androidx/releases/navigation3) 是 Navigation 组件的下一代实现。它进一步把返回栈交给调用方持有，`NavDisplay` 读取这个列表并显示内容。
+
+```kotlin
+val backStack = rememberNavBackStack(Home)
+backStack.add(Detail(42))
+backStack.removeLastOrNull()
+```
+
+**表 2**　返回栈归谁
+
+| | FragmentManager / NavController | Navigation 3 |
+| --- | --- | --- |
+| 返回栈 | 控制器内部 | 调用方 |
+| 可读范围 | 当前项或只读信息 | 整个列表 |
+| 修改方式 | 事务、`navigate()` | 列表增删 |
+| 仍需处理 | 事务与生命周期 | 恢复与序列化 |
+
+打开详情和返回，在这里表现为列表的增删。栈的长度、当前项和组合方式因此更容易直接表达。可是系统返回、目的地状态保存、进程恢复并不会因为栈变成列表就失去自己的规则；例如用于恢复的 `NavKey` 仍有序列化要求。状态化改变了导航的表达方式，没有取消导航语义。
+
+### 5.2 一次性事件没有统一答案
+
+删除成功后显示一条 Snackbar，看起来也能写成 `showMessage = true`。但提示消失以后谁来把它改回去，界面重建后是否还要显示，都需要额外约定。换成 `Channel` 或 `SharedFlow`，问题也不会自动消失。前者更接近队列，后者是可配置重放次数的热流；重放多少、何时收集、配置变更期间是否保留，仍决定提示是丢失还是再次出现。
+
+因此，不能把 SharedFlow 说成“恰好一次”的保证。它只是提供了发射、订阅和重放的机制，一次性语义仍要由使用场景定义。有些提示适合作为可持久状态的一部分，有些适合作为事件，还有些需要带标识并显式确认消费。
+
+数据流的价值不是给所有问题一个相同容器，而是让值从哪里来、由谁持有、怎样被消费变得可见。承认这些差异，也把前面的主线说得更清楚：它组织的是会持续变化并需要观察的数据，不是所有运行时行为。
+
+## 六、流向写清楚以后，靠什么维持
+
+Repository 统一数据出口，ViewModel 负责界面状态，UI 上抛事件——这些关系画在图上很直观，写在代码里却仍可能被绕过。包名约束不了它，文档也约束不了它；能长期维持方向的，是构建边界。
+
+单模块工程里的 `ui/`、`data/`、`domain/` 就是例子。它们首先只是包名。数据层某天引用一个 UI 类型，编译器不会因为分层图上的箭头而拒绝它：
+
+```kotlin
+// core/data 中的一个文件
+import com.example.feature.player.PlayerAdapter
+```
+
+多模块把其中一部分约定变成构建图中的依赖。一个模块没有声明依赖，就不能直接引用另一个模块的公开类型。[`implementation`](https://docs.gradle.org/current/userguide/java_library_plugin.html) 不把依赖暴露给下游的编译类路径，`api` 会；Kotlin 的 `internal` 则把声明限制在编译模块内。过去靠 review 发现的越界，现在有机会在编译时暴露。
 
 ```kotlin
 // :feature:player/build.gradle.kts
 dependencies {
     implementation(project(":core:model"))
-    // 不写 :core:data，就看不见数据层
+    // 在这个依赖声明下，播放模块看不见数据层
 }
 ```
 
-### 6.3 Hilt 把依赖图挪到编译期
+但 Gradle 检查的是依赖有没有声明，不是方向是否符合架构。`:core:data` 如果声明依赖 `:feature:player`，上面的反向引用照样可能通过。模块边界只能固定已经作出的设计，不能替设计者决定哪一层应该指向哪一层。
 
-[Hilt](https://developer.android.google.cn/training/dependency-injection/hilt-android) 是基于 Dagger 的依赖注入框架，在编译期生成依赖图，用注解声明谁提供、谁需要。它换掉的是手写单例、`object` 工具类和 ServiceLocator。后者的 `get()` 在测试里要手动替换，Hilt 换一个 binding 就行。
+方向是设计出来的，Gradle 只保证写下的方向不容易被偷偷绕过。模块拆得越多，边界划错的调整成本也越高。
 
-`@HiltAndroidApp` 生成应用级组件，`@Inject constructor` 标出提供方。ViewModel 那边加 `@HiltViewModel` 和 `hiltViewModel()`，不用再写 Factory。
+![feature 依赖 data、data 依赖 model 的声明可以编译；data 反向依赖 feature 也仍然可以编译，Gradle 不会判断架构方向](/images/modern-android/gradle-boundary.svg?w=600)
 
-代价都落在构建配置上。每个模块一份 `build.gradle.kts`，重复的部分要靠 `build-logic` 里的 convention plugin 收口；Hilt 的报错出在生成的 `Hilt_*.java` 里，第一次读像天书；编译期会变长，kapt 换 KSP 有改善，但没有消失。模块边界画错的代价比包名画错大得多，改一次要动整张 Gradle 图。
+[Hilt](https://developer.android.google.cn/training/dependency-injection/hilt-android) 是基于 Dagger 的依赖注入框架。它处理的是另一项工作：谁提供 Repository，谁需要它，这些装配关系通过注解进入编译期生成的依赖图。它减少了手写单例、ServiceLocator 和 ViewModel Factory，也让依赖关系更容易集中检查。不过，注入一个 Repository 不等于数据就会沿正确方向流动，生成一张依赖图也不等于拥有一张合理的数据流图。
 
-依赖方向能查了。状态本身怎么切，还是人的事。
+这些工程机制更适合被看作主线的护栏，而不是额外一层。页面少、数据入口少、维护者只有一个人时，包结构和简单注入可能已经够用；当多人开始并行修改、越界依赖反复出现时，把约定交给构建工具才更有收益。是否采用它们，仍取决于需要保护的结构有多大。
 
-## 结语
+## 结语：从哪来，到哪去
 
-六层交出去的是同一件事：什么时候读、什么时候停、什么时候刷新、由谁保证。交完之后，这些时刻由运行时和编译器安排，人只剩一个决定——状态长什么样。
+回到那次删除。页面没有消失，变化的是它为何更新：不再由调用方逐项命令，而由一套可观察的状态生成。它的来路和去向，都不在界面本身。这套组合并非 Android 首创，它的成熟模板来自 Web 前端。[React](https://react.dev/learn/thinking-in-react) 把单向数据流写进组件，[Redux](https://redux.js.org/tutorials/fundamentals/part-2-concepts-data-flow) 把它收紧为 action → reducer → store → view。更早的 [Elm Architecture](https://guide.elm-lang.org/architecture/) 用 Model、View、Update 描述同一件事。Compose、`UiState` 和 `StateFlow` 让 Android 有了几乎相同的表达方式，但 Android 并没有简单照搬。
 
-代价是失败的位置变了。以前是某一行忘了同步，翻代码能找到；现在是一段状态没有被结构接住，得先想清楚它归谁，才知道去哪儿修。
+Android 面对的运行环境更苛刻：进程可能被回收，配置变更会重建界面，返回栈、系统 Intent、前台服务和音频焦点各有生命周期。Web 的单向数据流回答“状态如何驱动界面”，Android 还要回答“界面消失以后，状态是否还活着”。
 
-这套移交有前提：框架要覆盖住每一条退出路径。覆盖不到的地方，交出去只是换个地方漏——播放进度、音频焦点、前台服务，结束条件来自系统回调和用户操作，不在任何一层的管辖里。
+来路并不等于终点。Web 解释了它在工程史上的出处，却不足以解释它为什么自然。真正的原因在更长的交互史：人只能通过有限的感官和动作使用机器，界面在不断试错中被筛选，能匹配这套输入的留下，不匹配的被淘汰。从命令行到图形界面，从网页到触屏，交互形式一直在变；输入、状态、表达、反馈这条回路却反复出现。它看起来像生命体的表达机制，但那是长期磨合的结果，不是从生物学推导出的原因。
 
-所以它不是可以整体采纳的套餐，而是一串独立的决定。一个人维护、三个月的项目，模块化和 Hilt 换不回学习成本；多人并行、边界开始被踩、构建时间成为日常阻塞，机制才开始值钱。
+人不会逐块控制面部肌肉来生成表情；表情是内部状态在外表上的结果。旧写法逐项修改 View，相当于绕过内部状态直接操纵表情；新范式先维持状态，再让表达从状态里产生。对碳基用户，这种筛选让这条回路接近完整：视觉、触控、语音、即时反馈与异步等待，都能在结构里找到位置。以屏幕为主要界面时，它很难再被整体替换。
 
-控制权交出去之后，人剩下的工作在最上游：把状态切成什么样。切错了，后面几层只是把错误传播得更整齐。
+但这份完整有一个前提：读者必须拥有人的感官。长期筛选出这套界面的，是碳基用户。若读者不再只有人，这把尺子就会失效。今天的 LLM 还谈不上硅基生命，但它已经提出一个新问题：当机器也参与读取和行动，界面是否仍然只能是给人看的像素？
+
+所以，这套范式可能是碳基界面的成熟形态，却未必是界面演化的终点。下一次会变成什么样，现在没有答案。能判断的是，数据流不会消失；它必须在另一种读者面前，找到新的出口。
+
+界面是应用的表情。下一个读懂它的，不一定还是人。
 
 ## 参考
 
-文中涉及的版本与 API 行为，以下列官方文档为准（访问日期均为 2026-10-17）：
+文中涉及的 API 与版本行为，以下列官方文档为准。访问日期：2026-10-29。
 
-1. [AsyncTask](https://developer.android.google.cn/reference/android/os/AsyncTask) — Android Developers（API 30 起废弃）
-2. [Lifecycle release notes](https://developer.android.google.cn/jetpack/androidx/releases/lifecycle) — Android Developers（2.4.0 起提供 `repeatOnLifecycle`）
-3. [DataStore release notes](https://developer.android.google.cn/jetpack/androidx/releases/datastore) — Android Developers（1.0.0，2021-08）
-4. [Room release notes](https://developer.android.google.cn/jetpack/androidx/releases/room) — Android Developers（2.2 起支持 `Flow` 返回类型）
-5. [Retrofit CHANGELOG](https://github.com/square/retrofit/blob/8c2b181ee0127c5f0ee4c93f47e1185119311602/CHANGELOG.md) — square/retrofit（2.6.0 起支持 `suspend`）
-6. [Stability in Compose](https://developer.android.google.cn/develop/ui/compose/performance/stability) — Android Developers
-7. [Strong skipping mode](https://developer.android.google.cn/develop/ui/compose/performance/stability/strongskipping) — Android Developers
-8. [Navigation 3 release notes](https://developer.android.google.cn/jetpack/androidx/releases/navigation3) — Android Developers（1.0.0，2025-11）
-9. [Save UI states](https://developer.android.google.cn/topic/libraries/architecture/saving-states) — Android Developers
-10. [Hilt](https://developer.android.google.cn/training/dependency-injection/hilt-android) — Android Developers
-11. [Java Library plugin](https://docs.gradle.org/current/userguide/java_library_plugin.html) — Gradle（`api` 与 `implementation` 的可见性差别）
+1. [Room：异步查询](https://developer.android.google.cn/training/data-storage/room/async-queries) — Android Developers（可观察查询与 `Flow`）
+2. [DataStore](https://developer.android.google.cn/topic/libraries/architecture/datastore) — Android Developers（异步、流式读取偏好数据）
+3. [Retrofit CHANGELOG](https://github.com/square/retrofit/blob/8c2b181ee0127c5f0ee4c93f47e1185119311602/CHANGELOG.md) — GitHub（`suspend` 支持）
+4. [StateFlow and SharedFlow](https://developer.android.google.cn/kotlin/flow/stateflow-and-sharedflow) — Android Developers（当前值、共享与重放语义）
+5. [Save UI states](https://developer.android.google.cn/topic/libraries/architecture/saving-states) — Android Developers（ViewModel、SavedStateHandle 与状态恢复）
+6. [Lifecycle-aware coroutine collection](https://developer.android.google.cn/topic/libraries/architecture/coroutines) — Android Developers（`collectAsStateWithLifecycle` 与 `repeatOnLifecycle`）
+7. [State and Jetpack Compose](https://developer.android.google.cn/develop/ui/compose/state) — Android Developers（Compose 中的状态）
+8. [Navigation 3 release notes](https://developer.android.google.cn/jetpack/androidx/releases/navigation3) — Android Developers（`NavDisplay` 与调用方持有的返回栈）
+9. [Java Library plugin](https://docs.gradle.org/current/userguide/java_library_plugin.html) — Gradle（`api` 与 `implementation`）
+10. [Hilt](https://developer.android.google.cn/training/dependency-injection/hilt-android) — Android Developers（编译期依赖图）
+11. [Cancellation and timeouts](https://kotlinlang.org/docs/cancellation-and-timeouts.html) — Kotlin Docs（协程的协作式取消）
+12. [Thinking in React](https://react.dev/learn/thinking-in-react) — React Docs（单向数据流与状态驱动渲染）
+13. [Redux Fundamentals, Part 2: Concepts and Data Flow](https://redux.js.org/tutorials/fundamentals/part-2-concepts-data-flow) — Redux Docs（action、reducer、store 与 view 的单向链路）
+14. [The Elm Architecture](https://guide.elm-lang.org/architecture/) — Elm Guide（Model、View、Update）

@@ -54,7 +54,7 @@
         <label for="ed-read-size">字号</label>
         <div class="ed-read-step">
           <button type="button" data-step="-1" aria-label="减小字号">−</button>
-          <input id="ed-read-size" type="range" min="14" max="21" step="1" data-pref="size" data-default="16">
+          <input id="ed-read-size" type="range" min="14" max="21" step="1" data-pref="size" data-default="15">
           <output data-out="size"></output>
           <button type="button" data-step="1" aria-label="增大字号">+</button>
         </div>
@@ -171,7 +171,7 @@
     /* 读 :root 上该偏好变量的**当前计算值**（去掉单位）。
        用来在"用户没存过偏好"时回填控件 —— 这样面板显示的就是当前断点
        的真实默认。宽屏（≥1080）与窄屏的默认不同（宽屏是书籍式排版：
-       缩进 2em / 两端对齐 / 段距 .6em …），用一个写死的 data-default
+       缩进 2em / 左对齐 / 段距 .6em …），用一个写死的 data-default
        去回填，必然在另一个断点上对不上。
        行宽 / 版心不在此列：--ed-measure 可能是 clamp()、--ed-container-w
        可能为空，交给下面的专门探针（读元素的实际 max-width）。 */
