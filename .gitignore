@@ -28,3 +28,8 @@ Thumbs.db
 
 # DSH 项目目录（只放本地软链，内容在 docs/skills/）
 /.dsh/
+
+# 公众号发布包与工具依赖
+/dist/wechat/
+/tools/wechat/node_modules/
+/tools/wechat/.env
